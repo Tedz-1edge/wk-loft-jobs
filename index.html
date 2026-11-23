@@ -843,7 +843,7 @@ async function planDay(){
 async function parseList(){
   const text = $("#paste").value.trim(), date = $("#pastedate").value || null;
   if (!text){ toast("Paste a customer list first."); return; }
-  if (/"app"\s*:\s*"wk-loft-jobs"/.test(text)){ await importJson(text); lsSet("loftjobs-draft", {text:"", date:""}); $("#paste") && ($("#paste").value = ""); return; }
+  if (/["\u201C\u201D]app["\u201C\u201D]\s*:\s*["\u201C\u201D]wk-loft-jobs/.test(text)){ await importJson(text); lsSet("loftjobs-draft", {text:"", date:""}); $("#paste") && ($("#paste").value = ""); return; }
   S.busy = "parse"; renderAdd();
   let jobs = null;
   const sample = await getSample();
@@ -894,10 +894,20 @@ function saveFile(name, text, type){
   const a = document.createElement("a"); a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 4000); toast("Saved to your downloads.");
 }
+function cleanPaste(t){
+  return String(t)
+    .replace(/[\u201C\u201D\u201E\u201F\u2033\u00AB\u00BB]/g, '"')
+    .replace(/[\u2018\u2019\u201A\u201B\u2032]/g, "'")
+    .replace(/[\u00A0\u2007\u202F]/g, " ")
+    .replace(/[\u200B-\u200D\uFEFF]/g, "")
+    .replace(/[\u2013\u2014]/g, "-")
+    .replace(/\r?\n/g, "");
+}
 async function importJson(raw){
+  raw = cleanPaste(raw);
   const a0 = raw.indexOf("{"), a1 = raw.lastIndexOf("}");
   if (a0 >= 0 && a1 > a0) raw = raw.slice(a0, a1 + 1);
-  let d; try { d = JSON.parse(raw); } catch(e){ toast("That doesn't look like a WK jobs backup. Copy it again from the old app."); return; }
+  let d; try { d = JSON.parse(raw); } catch(e){ toast(raw.length < 200 ? "Only part of the text was pasted. Copy the whole block and try again." : "The pasted text was changed or cut off when copying. Copy the whole block again and paste it."); return; }
   if (!d || d.app !== "wk-loft-jobs" || !Array.isArray(d.jobs)){ toast("That doesn't look like a WK jobs backup."); return; }
   let added = 0, updated = 0;
   for (const j of d.jobs){
