@@ -1,0 +1,1029 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#131313">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="WK Jobs">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
+</head>
+<body>
+<title>WK Loft Jobs</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@600;700&family=Barlow:wght@400;500;600&display=swap">
+<style>
+/* Layout: phone app shell. Sticky app bar (burger, title, sync dot), slide-in drawer for navigation, one screen at a time, floating + button; job details slide over as a full screen sheet */
+:root{
+  --bg:#f2f0ec; --surface:#ffffff; --raised:#f8f7f4; --fg:#161616; --muted:#67635e; --line:#dcd8d1; --chip:#e9e6e0;
+  --accent:#161616; --accent-ink:#ece6dc; --roof:#8f8a86;
+  --warn:#b4401f; --warn-bg:#fbe9e2; --ok:#2f7a45; --ok-bg:#e3f1e6; --info:#2d5f8a; --info-bg:#e2ecf5; --idle:#7a7c72;
+  --shadow:0 1px 2px rgba(29,31,28,.06),0 4px 14px rgba(29,31,28,.06); --scrim:rgba(20,21,17,.45);
+  --display:"Barlow Semi Condensed","Arial Narrow",Arial,sans-serif;
+  --body:"Barlow",system-ui,-apple-system,"Segoe UI",sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#131313; --surface:#1c1c1b; --raised:#242322; --fg:#ece6dc; --muted:#a29d96; --line:#302f2d; --chip:#2a2927;
+  --accent:#e4dcd4; --accent-ink:#151515; --roof:#9e9996;
+  --warn:#ff8f6b; --warn-bg:#3a2017; --ok:#72d08d; --ok-bg:#16301f; --info:#8fc0ea; --info-bg:#172839; --idle:#8d8f84;
+  --shadow:0 1px 2px rgba(0,0,0,.4),0 6px 18px rgba(0,0,0,.35); --scrim:rgba(0,0,0,.6); color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#131313; --surface:#1c1c1b; --raised:#242322; --fg:#ece6dc; --muted:#a29d96; --line:#302f2d; --chip:#2a2927;
+  --accent:#e4dcd4; --accent-ink:#151515; --roof:#9e9996;
+  --warn:#ff8f6b; --warn-bg:#3a2017; --ok:#72d08d; --ok-bg:#16301f; --info:#8fc0ea; --info-bg:#172839; --idle:#8d8f84;
+  --shadow:0 1px 2px rgba(0,0,0,.4),0 6px 18px rgba(0,0,0,.35); --scrim:rgba(0,0,0,.6); color-scheme:dark}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:16px;line-height:1.45}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+h1,h2,h3{font-family:var(--display);margin:0;text-wrap:balance;letter-spacing:.01em}
+h2{font-size:1.3rem} h3{font-size:1.1rem}
+p{margin:0}
+.appbar{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);border-bottom:1px solid var(--line)}
+.appbar-in{max-width:680px;margin:0 auto;padding-left:max(8px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:8px;display:flex;align-items:center;gap:10px;min-height:60px}
+.iconbtn{width:44px;height:44px;flex:none;display:grid;place-items:center;border:0;background:transparent;color:var(--fg);border-radius:12px;cursor:pointer}
+.iconbtn:hover{background:var(--chip)}
+.iconbtn svg{width:24px;height:24px}
+.lockup{display:flex;align-items:center;gap:10px;min-width:0;flex:1}
+.mark{width:36px;height:36px;flex:none}
+.ttl{min-width:0}
+.ttl h1{font-size:1.3rem;line-height:1.05;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ttl span{display:block;font-size:.66rem;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);font-weight:600;margin-top:2px;white-space:nowrap}
+.syncdot{width:10px;height:10px;border-radius:50%;background:var(--idle);flex:none;margin-right:4px}
+.syncdot[data-s="cloud"]{background:var(--ok)} .syncdot[data-s="local"],.syncdot[data-s="bad"]{background:var(--warn)}
+.togo{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.togo button{display:flex;flex-direction:column;align-items:flex-start;gap:2px;border:1px solid var(--line);background:var(--surface);color:var(--fg);border-radius:16px;padding:12px 14px;font:600 .9rem var(--body);cursor:pointer;text-align:left;box-shadow:var(--shadow)}
+.togo b{font-family:var(--display);font-size:2.1rem;line-height:1;font-variant-numeric:tabular-nums}
+.togo .today{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.togo button:focus-visible{outline:3px solid var(--fg);outline-offset:2px}
+#drawer{position:fixed;inset:0;z-index:25}
+.scrim{position:absolute;inset:0;background:var(--scrim);border:0;width:100%;cursor:pointer}
+.sheet{position:absolute;inset:0 auto 0 0;width:min(84vw,320px);background:var(--surface);box-shadow:var(--shadow);display:flex;flex-direction:column;gap:4px;overflow-y:auto;padding-top:calc(env(safe-area-inset-top,0px) + 18px);padding-bottom:calc(env(safe-area-inset-bottom,0px) + 18px);padding-left:max(14px,env(safe-area-inset-left,0px));padding-right:14px}
+@media (prefers-reduced-motion:no-preference){.sheet{animation:slidein .2s ease-out}.scrim{animation:fadein .2s}}
+@keyframes slidein{from{transform:translateX(-100%)}} @keyframes fadein{from{opacity:0}}
+.sheet-brand{display:flex;align-items:center;gap:12px;padding:4px 0 14px;border-bottom:1px solid var(--line);margin-bottom:8px}
+.sheet-brand .mark{width:52px;height:52px}
+.sheet-brand strong{font-family:var(--display);font-size:1.45rem;line-height:1;display:block}
+.sheet-brand span{font-size:.7rem;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.navlink{display:flex;align-items:center;gap:14px;min-height:50px;padding:0 12px;border-radius:12px;color:var(--fg);text-decoration:none;font-weight:600;font-size:1.05rem}
+.navlink svg{width:22px;height:22px;flex:none;color:var(--muted)}
+.navlink .ct{margin-left:auto;font-variant-numeric:tabular-nums;font-size:.85rem;background:var(--chip);border-radius:999px;padding:1px 9px;color:var(--muted)}
+.navlink .ct:empty{display:none}
+.mark{border-radius:9px;object-fit:cover;background:#151515;border:1px solid var(--line)}
+.wordmark{width:100%;max-width:260px;height:auto;border-radius:10px;display:block}
+.navlink[aria-current="page"]{background:var(--accent);color:var(--accent-ink)}
+.navlink[aria-current="page"] svg,.navlink[aria-current="page"] .ct{color:var(--accent-ink)}
+.navlink[aria-current="page"] .ct{background:transparent;border:1px solid currentColor}
+.navlink:focus-visible{outline:3px solid var(--accent);outline-offset:-3px}
+.sheet hr{border:0;border-top:1px solid var(--line);margin:8px 0;width:100%}
+.seg{display:grid;grid-template-columns:repeat(3,1fr);background:var(--chip);border-radius:12px;padding:3px;gap:3px}
+.seg button{border:0;background:transparent;color:var(--fg);border-radius:9px;min-height:38px;font:600 .9rem var(--body);cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--surface);box-shadow:var(--shadow)}
+.sheet .sub{font-size:.85rem;color:var(--muted);padding:0 12px}
+.fab{position:fixed;right:max(18px,calc(env(safe-area-inset-right,0px) + 18px));bottom:calc(env(safe-area-inset-bottom,0px) + 18px);z-index:6;width:60px;height:60px;border-radius:20px;border:0;background:var(--accent);color:var(--accent-ink);box-shadow:var(--shadow);display:grid;place-items:center;cursor:pointer}
+.fab svg{width:28px;height:28px}
+.fab:focus-visible{outline:3px solid var(--fg);outline-offset:3px}
+.pagehead h2{font-size:1.6rem}
+.pagehead p{color:var(--muted)}
+.btn:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+main{max-width:680px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:16px 110px;display:flex;flex-direction:column;gap:16px}
+.view{display:flex;flex-direction:column;gap:16px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:44px;padding:0 14px;border-radius:10px;font:600 1rem var(--body);text-decoration:none;border:1px solid var(--line);background:var(--surface);color:var(--fg);cursor:pointer}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn.small{min-height:36px;padding:0 10px;font-size:.92rem}
+.btn.ghost{background:transparent}
+.btn[disabled]{opacity:.5;cursor:default}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.grow{flex:1;min-width:0}
+.label{font-size:.75rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600}
+.muted{color:var(--muted)}
+.chip{background:var(--chip);border-radius:999px;padding:3px 11px;font-size:.88rem;font-variant-numeric:tabular-nums;white-space:nowrap}
+input,select,textarea{font:inherit;color:var(--fg);background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:9px 11px;min-height:44px;width:100%}
+textarea{min-height:180px;resize:vertical;line-height:1.4}
+label.f{display:flex;flex-direction:column;gap:4px;font-size:.9rem;color:var(--muted);font-weight:600}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media (max-width:420px){.grid2{grid-template-columns:1fr}}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);padding:14px;display:flex;flex-direction:column;gap:10px}
+.daynav{display:grid;grid-template-columns:44px 1fr 44px;gap:8px;align-items:center}
+.daynav .btn{padding:0}
+.daytitle{text-align:center}
+.daytitle h2{font-size:1.5rem}
+.daytitle input{max-width:180px;margin:4px auto 0;display:block;min-height:36px;padding:4px 8px;text-align:center}
+.summary{display:flex;flex-wrap:wrap;gap:8px}
+.calls{background:var(--warn-bg);border-radius:12px;padding:14px 16px;display:flex;flex-direction:column;gap:8px}
+.calls h3{color:var(--warn)}
+.calls ul{margin:0;padding-left:1.1em;display:flex;flex-direction:column;gap:6px}
+.legs{display:flex;flex-direction:column;gap:8px}
+.leg{justify-content:space-between;width:100%}
+.leg small{font-weight:500;opacity:.8}
+ol.stops{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px}
+.drive{color:var(--muted);font-size:.9rem;padding-left:64px}
+.stop{display:grid;grid-template-columns:52px 1fr;gap:12px;background:var(--surface);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);padding:14px;border-left-width:5px}
+.stop[data-tone="ok"]{border-left-color:var(--ok)} .stop[data-tone="warn"]{border-left-color:var(--warn)} .stop[data-tone="info"]{border-left-color:var(--info)} .stop[data-tone="idle"]{border-left-color:var(--line)}
+.stop.finished{opacity:.62}
+.time{font-family:var(--display);font-weight:700;font-size:1.25rem;font-variant-numeric:tabular-nums;line-height:1.1}
+.num{display:block;font-size:.8rem;color:var(--muted);font-family:var(--body);font-weight:600}
+.body{min-width:0;display:flex;flex-direction:column;gap:6px}
+.addr{font-weight:600;font-size:1.05rem}
+.who{color:var(--muted);overflow-wrap:anywhere}
+.window{display:inline-block;background:var(--chip);border-radius:6px;padding:2px 8px;font-size:.85rem;font-weight:600;width:fit-content}
+.window.tight{background:var(--accent);color:var(--accent-ink)}
+.window.late{background:var(--warn);color:var(--surface)}
+.note{border-left:3px solid var(--warn);padding-left:8px;font-size:.95rem;overflow-wrap:anywhere}
+.actions{display:flex;flex-wrap:wrap;gap:8px}
+.phone{font-variant-numeric:tabular-nums;user-select:all}
+.btn.donebtn{background:var(--ok);border-color:var(--ok);color:var(--surface);white-space:nowrap}
+.stop.next{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent)}
+.nexttag{font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--accent-ink);background:var(--accent);border-radius:6px;padding:1px 7px;width:fit-content}
+.focus{background:var(--surface);border:1px solid var(--line);border-radius:20px;box-shadow:var(--shadow);padding:18px;display:flex;flex-direction:column;gap:12px}
+.focus .eyebrow{display:flex;justify-content:space-between;gap:8px;align-items:baseline;font-size:.78rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.focus .due{font-family:var(--display);font-size:2.6rem;line-height:1;font-variant-numeric:tabular-nums}
+.focus .faddr{font-family:var(--display);font-size:1.55rem;line-height:1.1;text-wrap:balance}
+.focus .fwho{color:var(--muted);font-size:1.02rem;overflow-wrap:anywhere}
+.bigbtns{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.bigbtns .btn{min-height:56px;font-size:1.08rem;border-radius:14px}
+.bigbtns .wide{grid-column:1/-1}
+.focus .prog{height:6px;border-radius:3px;background:var(--chip);overflow:hidden}
+.focus .prog i{display:block;height:100%;background:var(--ok)}
+.lastdone{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:.92rem;color:var(--muted);border-top:1px solid var(--line);padding-top:10px}
+.donerow{display:flex;align-items:center;gap:10px;flex-wrap:wrap;color:var(--ok);font-weight:600}
+.pill{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:2px 10px;font-size:.82rem;font-weight:600;width:fit-content;white-space:nowrap}
+.pill::before{content:"";width:8px;height:8px;border-radius:50%;background:currentColor}
+.pill[data-tone="ok"]{background:var(--ok-bg);color:var(--ok)} .pill[data-tone="warn"]{background:var(--warn-bg);color:var(--warn)} .pill[data-tone="info"]{background:var(--info-bg);color:var(--info)} .pill[data-tone="idle"]{background:var(--chip);color:var(--muted)} .pill[data-tone="accent"]{background:var(--accent);color:var(--accent-ink)}
+.mover{display:flex;flex-direction:column;gap:4px;margin-top:6px}
+.mover .btn{min-height:34px;padding:0;font-size:.9rem}
+.filters{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;scrollbar-width:thin}
+.filters button{flex:none;border:1px solid var(--line);background:var(--surface);color:var(--fg);border-radius:999px;padding:6px 12px;font:600 .9rem var(--body);cursor:pointer;min-height:36px;white-space:nowrap}
+.filters button[aria-pressed="true"]{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+.filters b{font-variant-numeric:tabular-nums;margin-left:4px}
+ul.jobs{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.jobrow{width:100%;text-align:left;display:grid;grid-template-columns:1fr auto;gap:4px 10px;background:var(--surface);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);padding:12px 14px;font:inherit;color:inherit;cursor:pointer}
+.jobrow .sub{grid-column:1/-1;color:var(--muted);font-size:.9rem;overflow-wrap:anywhere}
+.empty{border:2px dashed var(--line);border-radius:12px;padding:22px 16px;text-align:center;color:var(--muted);display:flex;flex-direction:column;gap:10px;align-items:center}
+.banner{background:var(--info-bg);color:var(--fg);border-radius:12px;padding:12px 14px;font-size:.95rem}
+.banner.warn{background:var(--warn-bg)}
+.preview{display:flex;flex-direction:column;gap:8px}
+.pv{display:grid;grid-template-columns:28px 1fr;gap:10px;align-items:start;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px}
+.pv input[type=checkbox]{width:22px;height:22px;min-height:0;accent-color:var(--ok);margin-top:2px}
+.pv .dup{color:var(--warn);font-weight:600;font-size:.88rem}
+#panel{position:fixed;inset:0;z-index:20;background:var(--bg);overflow-y:auto;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+.panel-in{max-width:680px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:14px 48px;display:flex;flex-direction:column;gap:14px}
+.statusgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:6px}
+.statusgrid button{min-height:42px;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--fg);font:600 .92rem var(--body);cursor:pointer}
+.statusgrid button[aria-pressed="true"]{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+.hist{font-size:.88rem;color:var(--muted);display:flex;flex-direction:column;gap:2px;font-variant-numeric:tabular-nums}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(16px + env(safe-area-inset-bottom,0px));background:var(--fg);color:var(--bg);padding:10px 16px;border-radius:10px;font-weight:600;z-index:30;max-width:calc(100% - 32px)}
+.confirm{background:var(--warn-bg);border-radius:10px;padding:10px 12px;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.spin{display:inline-block;width:14px;height:14px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:sp 1s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.spin{animation:none}}
+</style>
+
+<header class="appbar"><div class="appbar-in">
+  <button class="iconbtn" type="button" id="menuBtn" data-act="menu" aria-label="Open menu" aria-expanded="false" aria-controls="drawer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
+  <div class="lockup"><img class="mark" src="data:image/jpeg;base64,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" alt="WK Loft Insulation"><div class="ttl"><h1 id="viewTitle">Today</h1><span>WK Loft Insulation</span></div></div>
+  <span class="syncdot" id="sync" role="status" aria-label="Connecting"></span>
+</div></header>
+
+<div id="drawer" hidden>
+  <button class="scrim" type="button" data-act="menu-close" aria-label="Close menu"></button>
+  <nav class="sheet" aria-label="Main menu">
+    <div class="sheet-brand"><img class="wordmark" src="data:image/jpeg;base64,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" alt="WK Loft Insulation"></div>
+    <a class="navlink" href="#day" id="nav-day"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>Today<span class="ct" id="ct-day"></span></a>
+    <a class="navlink" href="#surveys" id="nav-surveys"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4h6v3H9zM7 5.5H5.5v15h13v-15H17"/><path d="M8.5 12l2 2 4-4.5"/></svg>Surveys<span class="ct" id="ct-surveys"></span></a>
+    <a class="navlink" href="#installs" id="nav-installs"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12L12 4l9 8"/><path d="M6.5 13.5c1.2-1 2.3 1 3.5 0s2.3 1 3.5 0 2.3 1 3.5 0M5.5 17c1.4-1 2.6 1 4 0s2.6 1 4 0 2.6 1 4 0"/></svg>Installs<span class="ct" id="ct-installs"></span></a>
+    <a class="navlink" href="#add" id="nav-add"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Add jobs</a>
+    <hr>
+    <a class="navlink" href="#settings" id="nav-settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1"/></svg>Settings</a>
+    <a class="navlink" href="https://claude.ai/artifact/VbUg9zQX6TcTgWJCmLD9Sy" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>Survey checklist<span class="ct">↗</span></a>
+    <hr>
+    <span class="sub">Appearance</span>
+    <div class="seg" role="group" aria-label="Appearance" style="margin:6px 6px 0">
+      <button type="button" data-act="theme" data-t="dark">Dark</button><button type="button" data-act="theme" data-t="light">Light</button><button type="button" data-act="theme" data-t="auto">Phone</button>
+    </div>
+    <p class="sub" id="syncText" style="margin-top:14px"></p>
+  </nav>
+</div>
+
+<main>
+  <div id="banner" hidden></div>
+  <div class="togo" id="togo" aria-live="polite"></div>
+  <section class="view" id="v-day"></section>
+  <section class="view" id="v-surveys" hidden></section>
+  <section class="view" id="v-installs" hidden></section>
+  <section class="view" id="v-add" hidden></section>
+  <section class="view" id="v-settings" hidden></section>
+</main>
+<button class="fab" type="button" id="fab" data-act="fab" aria-label="Add jobs"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
+<div id="panel" hidden></div>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+/* ---------- constants ---------- */
+const STANDALONE = true; // set to true in the installable web app build
+const CHECKLIST_URL = "https://claude.ai/artifact/VbUg9zQX6TcTgWJCmLD9Sy";
+const DEFAULT_CFG = { home:"OL8 2AJ", surveyMins:15, installMins:180, travelMins:105, leave:"08:00", dark:"16:00" };
+const STATUSES = [
+  {k:"new", label:"To book", tone:"idle"},
+  {k:"booked", label:"Survey booked", tone:"info"},
+  {k:"surveyed", label:"Surveyed", tone:"ok"},
+  {k:"noanswer", label:"No answer", tone:"warn"},
+  {k:"rebook", label:"Rebook", tone:"warn"},
+  {k:"ready", label:"Ready for install", tone:"accent"},
+  {k:"installbooked", label:"Install booked", tone:"info"},
+  {k:"installed", label:"Installed", tone:"ok"},
+  {k:"cancelled", label:"Cancelled", tone:"idle"},
+];
+const ST = Object.fromEntries(STATUSES.map(s => [s.k, s]));
+const INSTALL_STAGE = new Set(["ready","installbooked","installed"]);
+const FINISHED = new Set(["surveyed","installed","cancelled","noanswer"]);
+
+/* ---------- helpers ---------- */
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const pad = n => String(n).padStart(2,"0");
+const ymd = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+const parseYmd = s => { const [y,m,d] = s.split("-").map(Number); return new Date(y, m-1, d); };
+const addDays = (s, n) => { const d = parseYmd(s); d.setDate(d.getDate()+n); return ymd(d); };
+const niceDate = s => parseYmd(s).toLocaleDateString("en-GB", {weekday:"long", day:"numeric", month:"long"});
+const shortDate = s => parseYmd(s).toLocaleDateString("en-GB", {weekday:"short", day:"numeric", month:"short"});
+const toMin = t => { if (!t || !/^\d{1,2}:\d{2}$/.test(t)) return null; const [h,m] = t.split(":").map(Number); return h*60+m; };
+const toHM = m => `${pad(Math.floor(m/60)%24)}:${pad(m%60)}`;
+const newId = () => "j" + Date.now().toString(36) + Math.random().toString(36).slice(2,6);
+const normPc = s => String(s||"").toUpperCase().replace(/\s+/g,"").replace(/^(.+)(\d[A-Z]{2})$/, "$1 $2");
+const telOf = s => String(s||"").replace(/[^\d+]/g, "");
+const q = j => encodeURIComponent(`${j.address}, ${j.postcode}, UK`);
+const navUrl = j => `https://www.google.com/maps/dir/?api=1&destination=${q(j)}&travelmode=driving`;
+const lsGet = (k, d) => { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch(e) { return d; } };
+const lsSet = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch(e) {} };
+function toast(msg){ const t = $("#toast"); t.textContent = msg; t.hidden = false; clearTimeout(toast.h); toast.h = setTimeout(() => t.hidden = true, 2200); }
+const todayYmd = () => ymd(new Date());
+
+/* ---------- theme (per device) ---------- */
+function applyTheme(t){
+  const r = document.documentElement;
+  if (t === "auto") r.removeAttribute("data-theme"); else r.setAttribute("data-theme", t);
+  document.querySelectorAll('[data-act="theme"]').forEach(b => b.setAttribute("aria-pressed", b.dataset.t === t));
+}
+let THEME = lsGet("loftjobs-theme", "dark");
+applyTheme(THEME);
+
+/* ---------- state ---------- */
+const S = { jobs:new Map(), days:{}, cfg:{...DEFAULT_CFG}, mode:"loading", view:"day", day:todayYmd(), autoDay:true, filters:{surveys:"togo", installs:"all"}, addKind:"survey", filter:"active", search:"", parsed:null, busy:"" };
+let db = null, sampleFn = null, downloads = null;
+
+/* ---------- store ---------- */
+function localSave(){ lsSet("loftjobs-local", {jobs:[...S.jobs.values()], days:S.days, cfg:S.cfg}); }
+function useLocal(reason){
+  if (S.mode === "cloud") return;
+  const L = lsGet("loftjobs-local", null);
+  if (L){ S.jobs = new Map((L.jobs||[]).map(j => [j.id, j])); S.days = L.days || {}; S.cfg = {...DEFAULT_CFG, ...(L.cfg||{})}; }
+  S.mode = "local"; S.localReason = reason; renderAll();
+}
+async function initStore(){
+  if (STANDALONE){ try { navigator.storage?.persist?.(); } catch(e){} useLocal("standalone"); return; }
+  const timer = setTimeout(() => { if (S.mode === "loading") useLocal("slow"); }, 10000);
+  try { db = window.claude?.use ? await window.claude.use("db") : null; } catch(e){ db = null; }
+  if (!db){ clearTimeout(timer); useLocal("none"); return; }
+  const fail = e => { clearTimeout(timer); S.syncError = e?.message || "Could not reach your saved jobs."; renderSync(); if (S.mode === "loading") useLocal("error"); };
+  db.collection("jobs").onSnapshot(snap => {
+    clearTimeout(timer);
+    S.jobs = new Map(snap.docs.map(d => [d.id, {...d.data(), id:d.id}]));
+    S.mode = "cloud"; S.syncError = null; renderAll();
+  }, fail);
+  db.collection("days").onSnapshot(snap => { S.days = Object.fromEntries(snap.docs.map(d => [d.id, d.data()])); renderAll(); }, () => {});
+  db.doc("config/main").onSnapshot(snap => { S.cfg = {...DEFAULT_CFG, ...(snap.exists ? snap.data() : {})}; renderAll(); }, () => {});
+}
+async function writeJob(job){
+  S.jobs.set(job.id, job);
+  if (S.mode === "cloud" && db){
+    try { await db.doc("jobs/"+job.id).set(stripId(job)); }
+    catch(e){ toast("Couldn't save. Check your signal and try again."); }
+  } else localSave();
+}
+function stripId(j){ const o = {...j}; delete o.id; return o; }
+async function removeJob(id){
+  S.jobs.delete(id);
+  if (S.mode === "cloud" && db){ try { await db.doc("jobs/"+id).delete(); } catch(e){ toast("Couldn't delete. Try again."); } }
+  else localSave();
+}
+async function writeDay(date, patch){
+  S.days[date] = {...(S.days[date]||{}), ...patch};
+  if (S.mode === "cloud" && db){ try { await db.doc("days/"+date).set(S.days[date]); } catch(e){ toast("Couldn't save the day settings."); } }
+  else localSave();
+}
+async function writeCfg(patch){
+  S.cfg = {...S.cfg, ...patch};
+  if (S.mode === "cloud" && db){ try { await db.doc("config/main").set(S.cfg); } catch(e){ toast("Couldn't save settings."); } }
+  else localSave();
+}
+function setStatus(job, status, extra={}){
+  const j = {...job, ...extra, status, history:[...(job.history||[]), {at:new Date().toISOString(), s:status, d:extra.date ?? job.date ?? null}].slice(-30)};
+  return writeJob(j);
+}
+
+/* ---------- planning maths ---------- */
+const visitMins = j => Number(j.mins) || (INSTALL_STAGE.has(j.status) ? S.cfg.installMins : S.cfg.surveyMins);
+function guessDrive(a, b){
+  if (!a) return S.cfg.travelMins;
+  const pa = normPc(a.postcode), pb = normPc(b.postcode);
+  if (pa && pa === pb) return 2;
+  const sa = pa.slice(0, -2), sb = pb.slice(0, -2);
+  if (sa === sb) return 5;
+  if (pa.split(" ")[0] === pb.split(" ")[0]) return 10;
+  return 18;
+}
+function dayJobs(date){
+  return [...S.jobs.values()].filter(j => j.date === date && j.status !== "cancelled")
+    .sort((a,b) => (a.order ?? 999) - (b.order ?? 999) || String(a.postcode).localeCompare(String(b.postcode)));
+}
+function schedule(date){
+  const list = dayJobs(date);
+  const meta = S.days[date] || {};
+  const leave = toMin(meta.leave || S.cfg.leave);
+  let t = leave, prev = null;
+  const rows = list.map((j, i) => {
+    const drive = Number.isFinite(j.drive) ? j.drive : guessDrive(prev, j);
+    let arrive = t + drive;
+    const ws = toMin(j.winStart), we = toMin(j.winEnd);
+    let wait = 0;
+    if (ws != null && arrive < ws){ wait = ws - arrive; arrive = ws; }
+    const late = we != null && arrive > we;
+    const end = arrive + visitMins(j);
+    t = end; prev = j;
+    return {j, i, drive, arrive, end, wait, late};
+  });
+  const back = prev ? S.cfg.travelMins : 0;
+  return {rows, leave, home: t + back};
+}
+
+/* ---------- Claude helpers ---------- */
+async function getSample(){
+  if (STANDALONE) return null;
+  if (sampleFn !== null) return sampleFn;
+  try { sampleFn = window.claude?.use ? await window.claude.use("sample") : null; } catch(e){ sampleFn = null; }
+  return sampleFn;
+}
+function parsePrompt(text){
+  return `You read pasted lists of customers for a UK loft insulation surveyor and turn them into structured jobs.
+Today is ${todayYmd()} (${niceDate(todayYmd())}).
+Return ONLY JSON: {"jobs":[{"name":string,"address":string,"postcode":string,"phone":string,"window":string,"winStart":"HH:MM"|null,"winEnd":"HH:MM"|null,"mins":number,"callAhead":number|null,"notes":string,"date":"YYYY-MM-DD"|null}]}
+Rules:
+- One job per property. address = house number, street and town if given, without the postcode. postcode uppercase with a space.
+- name: the customer's name, or "" if none given. phone: as written; if several, join with " / ".
+- window: the time window as a short phrase ("9am to 12:30", "After 12:30", "Call 1 hour before"), "" if none. winStart/winEnd in 24h when you can tell; "after 12:30" means winStart 12:30, winEnd null; "before 12:45" means winEnd 12:30 (they need 15 minutes).
+- mins: 15 by default. 20 if the customer is elderly (75+), hard of hearing, disabled or otherwise needs extra time.
+- callAhead: minutes they want a call before arrival (60 for "call 1hr before"), else null.
+- notes: short plain-English notes that matter on the day (access, vulnerability, who answers the phone, broken intercom, pets). "" if nothing.
+- date: only if the text clearly names the visit day; resolve it relative to today. Otherwise null.
+- Never invent details that are not in the text.
+
+Pasted text:
+"""
+${text}
+"""`;
+}
+function fallbackParse(text){
+  const pcRe = /\b([A-Z]{1,2}\d[A-Z\d]?)\s*(\d[A-Z]{2})\b/i;
+  const phRe = /(?:\+44\s?7\d{3}|07\d{3}|01\d{3}|02\d)\s?\d{3}\s?\d{3,4}/g;
+  const t = s => { const m = String(s).trim().toLowerCase().match(/^(\d{1,2})(?:[:.](\d{2}))?\s*(am|pm)?$/); if (!m) return null; let h = +m[1]; const mi = +(m[2]||0); if (m[3] === "pm" && h < 12) h += 12; if (m[3] === "am" && h === 12) h = 0; if (!m[3] && h < 7) h += 12; return h < 24 ? `${pad(h)}:${pad(mi)}` : null; };
+  const T = "(\\d{1,2}(?:[:.]\\d{2})?\\s*(?:am|pm)?)";
+  let blocks = text.split(/\n\s*\n/).map(b => b.trim()).filter(Boolean);
+  if (blocks.length === 1){ const lines = blocks[0].split("\n").filter(l => l.trim()); if (lines.filter(l => pcRe.test(l)).length > 1 && lines.every(l => pcRe.test(l) || !l.trim())) blocks = lines; }
+  const out = [];
+  for (const b of blocks){
+    const pc = b.match(pcRe); if (!pc) continue;
+    const phones = b.match(phRe) || [];
+    const flat = b.replace(/\t/g, "\n");
+    const lines = flat.split("\n").map(l => l.trim()).filter(Boolean);
+    let addrLine = lines.find(l => /^\d+[a-z]?\s+\w/i.test(l)) || lines.find(l => pcRe.test(l)) || lines[0];
+    let address = addrLine.replace(pcRe, "").replace(phRe, "").replace(/[,\s]+$/,"").trim();
+    if (lines.length === 1){ address = (b.split(pcRe)[0] || "").split(/,/).slice(0,2).join(",").replace(/[,\s]+$/,"").trim() || address; }
+    let window = "", winStart = null, winEnd = null, callAhead = null;
+    const low = b.toLowerCase();
+    let m;
+    if ((m = low.match(new RegExp(T + "\\s*(?:-|–|to|until|till)\\s*" + T)))){ winStart = t(m[1]); winEnd = t(m[2]); window = m[0]; }
+    else if ((m = low.match(new RegExp("after\\s*" + T)))){ winStart = t(m[1]); window = m[0]; }
+    else if ((m = low.match(new RegExp("before\\s*" + T)))){ const e = toMin(t(m[1])); winEnd = e != null ? toHM(e - 15) : null; window = m[0]; }
+    else if (/\b(morning|am only)\b/.test(low)){ winEnd = "12:00"; window = "Morning"; }
+    else if (/\b(afternoon|pm only)\b/.test(low)){ winStart = "12:00"; window = "Afternoon"; }
+    if ((m = low.match(/call\D{0,15}(\d+)\s*(h|hr|hour|min)/))) callAhead = m[2].startsWith("m") ? +m[1] : +m[1] * 60;
+    else if (/call\s*(an?|one)\s*hour/.test(low)) callAhead = 60;
+    if (callAhead && !window) window = `Call ${callAhead >= 60 ? callAhead/60 + " hour" : callAhead + " min"} before`;
+    const rest = lines.filter(l => l !== addrLine && !pcRe.test(l)).map(l => l.replace(phRe, "").replace(/^[,\s\-:]+|[,\s\-:]+$/g, "")).filter(Boolean);
+    const nameIdx = rest.findIndex(l => /^[A-Z][a-z]+(?:\s+(?:and|&)?\s*[A-Z][a-z'-]+){0,4}$/.test(l) || /^(mr|mrs|ms|miss)\b/i.test(l));
+    const name = nameIdx >= 0 ? rest.splice(nameIdx, 1)[0] : "";
+    const notes = rest.filter(l => !window || !l.toLowerCase().includes(window)).join(". ");
+    const elderly = /\b(elderly|hard of hearing|deaf|disabled|8\d|9\d)\s*(years?|yrs?)?\b/i.test(b) && /(elderly|hearing|deaf|disabled|years|yrs|old)/i.test(b);
+    out.push({ name, address, postcode: normPc(pc[1]+pc[2]), phone: phones.map(x => x.trim()).join(" / "), window, winStart, winEnd, mins: elderly ? 20 : 15, callAhead, notes, date:null });
+  }
+  return out;
+}
+function planPrompt(date, list){
+  return `You plan a one-day driving route for a UK loft insulation surveyor.
+Start and finish: ${S.cfg.home}. Day: ${niceDate(date)}. Leaving home at ${(S.days[date]||{}).leave || S.cfg.leave}.
+Visits (id, address, postcode, minutes on site, time window):
+${list.map(j => `- ${j.id} | ${j.address} | ${j.postcode} | ${visitMins(j)} min | ${j.window || "any time"}${j.winStart ? ` (from ${j.winStart})` : ""}${j.winEnd ? ` (until ${j.winEnd})` : ""}`).join("\n")}
+Put the visits in the order that keeps driving short while arriving inside every time window. Visit same-street neighbours one after another. Use what you know of UK postcode geography to estimate typical driving minutes.
+Return ONLY JSON: {"order":[ids in visiting order],"drive":[driving minutes to reach each visit in that order, the first from ${S.cfg.home}],"leave":"HH:MM" (suggested time to leave home so the first window is met without long waits),"warning":"one short sentence about any window that can't be met, or empty"}`;
+}
+
+/* ---------- views ---------- */
+const VIEWS = {day:"Today", surveys:"Surveys", installs:"Installs", add:"Add jobs", settings:"Settings"};
+function setView(v){
+  if (v === "jobs") v = "surveys";
+  S.view = VIEWS[v] ? v : "day";
+  for (const k of Object.keys(VIEWS)){
+    $("#v-"+k).hidden = k !== S.view;
+    const n = $("#nav-"+k); if (k === S.view) n.setAttribute("aria-current","page"); else n.removeAttribute("aria-current");
+  }
+  $("#viewTitle").textContent = VIEWS[S.view];
+  $("#fab").hidden = S.view === "add" || S.view === "settings";
+  $("#togo").hidden = S.view !== "day";
+  menu(false);
+  renderAll();
+  window.scrollTo(0, 0);
+}
+function menu(open){
+  const d = $("#drawer"), b = $("#menuBtn");
+  if (d.hidden === !open) return;
+  d.hidden = !open; b.setAttribute("aria-expanded", open);
+  if (open){ updateCounts(); (d.querySelector('[aria-current="page"]') || d.querySelector(".navlink")).focus(); }
+  else if (document.activeElement && d.contains(document.activeElement)) b.focus();
+}
+const isInstall = j => INSTALL_STAGE.has(j.status);
+function updateCounts(){
+  const all = [...S.jobs.values()];
+  $("#ct-day").textContent = dayJobs(todayYmd()).filter(j => !FINISHED.has(j.status)).length || "";
+  $("#ct-surveys").textContent = all.filter(j => !isInstall(j) && TOGO.has(j.status)).length || "";
+  $("#ct-installs").textContent = all.filter(j => isInstall(j) && TOGO.has(j.status)).length || "";
+}
+function renderSync(){
+  const el = $("#sync");
+  if (STANDALONE){ const t = "Saved on this phone. Back up from Settings."; el.dataset.s = "cloud"; el.setAttribute("aria-label", t); el.title = t; $("#syncText").textContent = t; $("#banner").hidden = true; return; }
+  const txt = S.mode === "loading" ? "Connecting…" : S.mode === "cloud" ? (S.syncError ? "Not saving right now" : "All changes saved to your account") : "Saving on this device only";
+  el.dataset.s = S.syncError ? "bad" : S.mode; el.setAttribute("aria-label", txt); el.title = txt;
+  $("#syncText").textContent = txt;
+  const b = $("#banner");
+  if (S.mode === "local"){
+    b.hidden = false; b.className = "banner warn";
+    b.textContent = "This view can't reach your saved jobs, so anything you change stays on this device. Open the app from your Claude account while signed in to keep jobs in sync.";
+  } else if (S.syncError){ b.hidden = false; b.className = "banner warn"; b.textContent = S.syncError; }
+  else b.hidden = true;
+}
+const TOGO = new Set(["new","booked","noanswer","rebook","ready","installbooked"]);
+function renderCounter(){
+  const el = $("#togo");
+  if (S.mode === "loading"){ el.innerHTML = ""; return; }
+  const day = S.day, left = dayJobs(day).filter(j => !FINISHED.has(j.status)).length;
+  const total = [...S.jobs.values()].filter(j => TOGO.has(j.status)).length;
+  const dayLabel = day === todayYmd() ? "today" : "on " + shortDate(day).split(" ")[0];
+  el.innerHTML = `<button type="button" class="today" data-act="gonext"><b>${left}</b> to go ${esc(dayLabel)}</button>
+    <button type="button" data-act="filter-togo"><b>${total}</b> jobs to go in total</button>`;
+}
+function renderAll(){
+  renderSync(); renderCounter(); updateCounts();
+  if (S.view === "day") renderDay();
+  if (S.view === "surveys") renderJobs("surveys");
+  if (S.view === "installs") renderJobs("installs");
+  if (S.view === "add") renderAdd();
+  if (S.view === "settings") renderSettings();
+  if (!$("#panel").hidden && S.openId) renderPanel(S.openId, true);
+}
+function focusHtml(r, done, sch){
+  const ni = r.findIndex(x => !FINISHED.has(x.j.status));
+  const hAt = j => String((j.history||[]).slice(-1)[0]?.at || "");
+  const finished = r.filter(x => FINISHED.has(x.j.status)).map(x => x.j).sort((a,b) => hAt(a).localeCompare(hAt(b)));
+  const last = finished[finished.length-1];
+  const lastLine = last ? `<div class="lastdone"><span>Last: ${esc(last.address)} · ${esc(ST[last.status]?.label || "")}</span><button class="btn small" type="button" data-act="undo" data-id="${last.id}">Undo</button></div>` : "";
+  const pct = Math.round(done / r.length * 100);
+  if (ni < 0){
+    const home = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(S.cfg.home + ", UK")}&travelmode=driving`;
+    return `<section class="focus" aria-label="Next job"><div class="eyebrow"><span>All ${r.length} done</span><span>${done} of ${r.length}</span></div>
+      <div class="prog"><i style="width:100%"></i></div>
+      <div class="faddr">That's the day finished.</div><div class="fwho">Head home to ${esc(S.cfg.home)}. Any no answers are under Surveys, ready to rebook.</div>
+      <div class="bigbtns"><a class="btn primary wide" href="${home}" target="_blank" rel="noopener">Drive home</a></div>${lastLine}</section>`;
+  }
+  const x = r[ni], j = x.j, install = INSTALL_STAGE.has(j.status), tel = j.phone ? telOf(j.phone.split("/")[0]) : "";
+  return `<section class="focus" aria-label="Next job" aria-live="polite">
+    <div class="eyebrow"><span>Next job · stop ${ni+1} of ${r.length}</span><span>${done} done</span></div>
+    <div class="prog"><i style="width:${pct}%"></i></div>
+    <div class="due">${toHM(x.arrive)}</div>
+    <div class="faddr">${esc(j.address)}, ${esc(j.postcode)}</div>
+    <div class="fwho">${esc(j.name || "Name not given")}${j.phone ? ` · <span class="phone">${esc(j.phone)}</span>` : ""} · ${install ? "Install" : "Survey"} ${visitMins(j)} min</div>
+    ${j.window ? `<span class="window${x.late ? " late" : " tight"}">${x.late ? "Misses window: " : "Window: "}${esc(j.window)}</span>` : ""}
+    ${j.callAhead ? `<div class="note">Ring about ${toHM(x.arrive - j.callAhead)}. They want notice before you arrive.</div>` : ""}
+    ${j.notes ? `<div class="note">${esc(j.notes)}</div>` : ""}
+    <div class="bigbtns">
+      <a class="btn primary" href="${navUrl(j)}" target="_blank" rel="noopener">Navigate</a>
+      ${tel ? `<a class="btn" href="tel:${tel}">Call</a>` : `<button class="btn" type="button" disabled>No number</button>`}
+      <button class="btn donebtn wide" type="button" data-act="st" data-s="${install ? "installed" : "surveyed"}" data-id="${j.id}">✓ ${install ? "Installed" : "Surveyed"}, next job</button>
+      <button class="btn" type="button" data-act="st" data-s="noanswer" data-id="${j.id}">No answer</button>
+      <button class="btn" type="button" data-act="open" data-id="${j.id}">Details</button>
+    </div>
+    ${tel ? `<button class="btn small ghost" type="button" data-act="copy" data-ph="${esc(tel)}" style="width:fit-content">Copy number</button>` : ""}
+    ${lastLine}
+  </section>`;
+}
+function lastAt(j){ const h = (j.history||[]).slice(-1)[0]; if (!h || h.s !== j.status) return ""; const d = new Date(h.at); return ymd(d) === j.date ? toHM(d.getHours()*60 + d.getMinutes()) : ""; }
+function pillHtml(s){ const st = ST[s] || ST.new; return `<span class="pill" data-tone="${st.tone}">${st.label}</span>`; }
+
+/* --- Day --- */
+function renderDay(){
+  const v = $("#v-day"), date = S.day, sch = schedule(date), meta = S.days[date] || {};
+  const dates = [...new Set([...S.jobs.values()].map(j => j.date).filter(Boolean))].sort();
+  const nextWith = dates.find(d => d > date), prevWith = [...dates].reverse().find(d => d < date);
+  let html = `<div class="daynav">
+      <button class="btn" type="button" data-act="day-prev" aria-label="Previous day">‹</button>
+      <div class="daytitle"><h2>${esc(niceDate(date))}</h2><input type="date" id="daypick" value="${date}" aria-label="Pick a day"></div>
+      <button class="btn" type="button" data-act="day-next" aria-label="Next day">›</button>
+    </div>`;
+  if (S.mode === "loading"){ v.innerHTML = html + `<div class="empty"><span class="spin"></span>Loading your jobs…</div>`; return; }
+  if (!sch.rows.length && S.autoDay && (nextWith || prevWith)){ S.autoDay = false; S.day = nextWith || prevWith; renderCounter(); return renderDay(); }
+  if (sch.rows.length) S.autoDay = false;
+  if (!sch.rows.length){
+    html += `<div class="empty"><strong>Nothing booked for this day.</strong>
+      <span>Paste a customer list under Add jobs and pick this date, or give a date to jobs waiting to be booked.</span>
+      <div class="row" style="justify-content:center">
+        <a class="btn primary" href="#add">Add jobs</a>
+        ${nextWith ? `<button class="btn" type="button" data-act="goto" data-d="${nextWith}">Next booked day: ${esc(shortDate(nextWith))}</button>` : ""}
+        ${!nextWith && prevWith ? `<button class="btn" type="button" data-act="goto" data-d="${prevWith}">Last booked day: ${esc(shortDate(prevWith))}</button>` : ""}
+      </div></div>`;
+    v.innerHTML = html; return;
+  }
+  const r = sch.rows, done = r.filter(x => FINISHED.has(x.j.status)).length;
+  html += focusHtml(r, done, sch);
+  const lateCount = r.filter(x => x.late).length;
+  html += `<div class="summary">
+      <span class="chip">${r.length} visit${r.length>1?"s":""}</span>
+      <span class="chip">${done} of ${r.length} done</span>
+      <span class="chip">First door ${toHM(r[0].arrive)}</span>
+      <span class="chip">Last door ${toHM(r[r.length-1].arrive)}</span>
+      <span class="chip">Home about ${toHM(sch.home)}</span>
+    </div>
+    <div class="card">
+      <div class="row">
+        <label class="f grow" for="leave">Leave ${esc(S.cfg.home)} at<input type="time" id="leave" value="${esc(meta.leave || S.cfg.leave)}"></label>
+        <button class="btn primary" type="button" data-act="plan" ${S.busy ? "disabled" : ""}>${S.busy === "plan" ? `<span class="spin"></span> Planning…` : "Plan the best order"}</button>
+      </div>
+      <p class="muted" style="font-size:.9rem">${meta.planned ? `Order planned ${esc(meta.planned)}. ` : ""}Drive times are estimates from postcodes, so check Google Maps on the day. Use ▲ ▼ on a stop to change the order yourself.${meta.warning ? `<br><strong style="color:var(--warn)">${esc(meta.warning)}</strong>` : ""}</p>
+      ${lateCount ? `<p style="color:var(--warn);font-weight:600">${lateCount} stop${lateCount>1?"s miss their":" misses its"} time window. Try leaving earlier or moving a stop.</p>` : ""}
+    </div>`;
+  // calls
+  const calls = [];
+  r.forEach(x => {
+    const j = x.j; if (FINISHED.has(j.status)) return;
+    if (j.callAhead) calls.push(`<strong>About ${toHM(x.arrive - j.callAhead)}:</strong> ring ${esc(j.name || j.address)} on <span class="phone">${esc(j.phone)}</span>. They want ${j.callAhead === 60 ? "an hour's" : j.callAhead > 60 && j.callAhead % 60 === 0 ? (j.callAhead/60) + " hours'" : j.callAhead + " minutes'"} notice and you're due about ${toHM(x.arrive)}.`);
+    else if (/\b(call|ring|phone)\b/i.test(j.notes || "") && !/intercom/i.test(j.notes||"")) calls.push(`<strong>${esc(j.name || j.address)}</strong> (${toHM(x.arrive)}): ${esc(j.notes)}`);
+  });
+  if (calls.length) html += `<section class="calls"><h3>Calls to make</h3><ul>${calls.map(c => `<li>${c}</li>`).join("")}</ul></section>`;
+  // legs
+  const H = encodeURIComponent(S.cfg.home + ", UK"), jobsInOrder = r.map(x => x.j), legs = [];
+  for (let i = 0; i < jobsInOrder.length; i += 8){
+    const chunk = jobsInOrder.slice(i, i+8), origin = i === 0 ? H : q(jobsInOrder[i-1]);
+    const dest = chunk[chunk.length-1], way = chunk.slice(0,-1).map(q).join("%7C");
+    legs.push({href:`https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${q(dest)}${way ? "&waypoints="+way : ""}&travelmode=driving`, label: i === 0 ? `From home to stop ${i+chunk.length}` : `Stops ${i+1} to ${i+chunk.length}`, sub:`${chunk.length} stop${chunk.length>1?"s":""}`});
+  }
+  legs.push({href:`https://www.google.com/maps/dir/?api=1&origin=${q(jobsInOrder[jobsInOrder.length-1])}&destination=${H}&travelmode=driving`, label:"Drive home", sub:S.cfg.home});
+  html += `<section class="legs"><h3>Google Maps routes</h3>${legs.map((l,i) => `<a class="btn leg${i===0?" primary":""}" href="${l.href}" target="_blank" rel="noopener">${esc(l.label)} <small>${esc(l.sub)}</small></a>`).join("")}</section>`;
+  // stops
+  html += `<section style="display:flex;flex-direction:column;gap:10px"><h3>Stops in order</h3><ol class="stops">`;
+  const dark = toMin(S.cfg.dark);
+  const nextIdx = r.findIndex(x => !FINISHED.has(x.j.status));
+  r.forEach((x, i) => {
+    const j = x.j, st = ST[j.status] || ST.booked, fin = FINISHED.has(j.status), isNext = i === nextIdx;
+    html += `<li class="drive">↓ ${x.drive <= 1 ? "Next door or across the road" : `About ${x.drive} min`}${i===0 ? " from home" : ""}${x.wait ? `, then ${x.wait} min wait for the window` : ""}</li>`;
+    const install = INSTALL_STAGE.has(j.status);
+    html += `<li class="stop${fin ? " finished" : ""}${isNext ? " next" : ""}" id="stop-${j.id}" data-tone="${st.tone === "accent" ? "info" : st.tone}">
+      <div><div class="time">${toHM(x.arrive)}<span class="num">Stop ${i+1}</span></div>
+        <div class="mover"><button class="btn" type="button" data-act="up" data-id="${j.id}" aria-label="Move earlier" ${i===0?"disabled":""}>▲</button><button class="btn" type="button" data-act="down" data-id="${j.id}" aria-label="Move later" ${i===r.length-1?"disabled":""}>▼</button></div></div>
+      <div class="body">
+        ${isNext ? `<span class="nexttag">Next stop</span>` : ""}
+        <div class="row" style="justify-content:space-between"><span class="addr">${esc(j.address)}, ${esc(j.postcode)}</span>${pillHtml(j.status)}</div>
+        <div class="who">${esc(j.name || "Name not given")}${j.phone ? ` · <span class="phone">${esc(j.phone)}</span>` : ""} · ${install ? "Install" : "Survey"} ${visitMins(j)} min</div>
+        ${j.window ? `<span class="window${x.late ? " late" : (j.winStart || j.winEnd || j.callAhead) ? " tight" : ""}">${x.late ? "Misses window: " : "Window: "}${esc(j.window)}</span>` : ""}
+        ${dark != null && x.arrive >= dark && !fin ? `<span class="window late">After dark</span>` : ""}
+        ${j.notes ? `<div class="note">${esc(j.notes)}</div>` : ""}
+        <div class="actions">
+          <a class="btn primary small" href="${navUrl(j)}" target="_blank" rel="noopener">Navigate</a>
+          ${j.phone ? `<a class="btn small" href="tel:${telOf(j.phone.split("/")[0])}">Call</a><button class="btn small" type="button" data-act="copy" data-ph="${esc(telOf(j.phone.split("/")[0]))}">Copy number</button>` : ""}
+        </div>
+        ${fin ? `<div class="donerow"><span>${j.status === "noanswer" ? "No answer" : "✓ " + esc(st.label)}${lastAt(j) ? " at " + lastAt(j) : ""}</span>
+            <button class="btn small" type="button" data-act="undo" data-id="${j.id}">Undo</button>
+            <button class="btn small ghost" type="button" data-act="open" data-id="${j.id}">Details</button></div>`
+        : `<div class="actions">
+          ${install
+            ? `<button class="btn donebtn grow" type="button" data-act="st" data-s="installed" data-id="${j.id}">✓ Installed</button>`
+            : `<button class="btn donebtn grow" type="button" data-act="st" data-s="surveyed" data-id="${j.id}">✓ Surveyed</button>`}
+          <button class="btn" type="button" data-act="st" data-s="noanswer" data-id="${j.id}">No answer</button>
+          <button class="btn ghost" type="button" data-act="open" data-id="${j.id}">Details</button>
+        </div>`}
+      </div></li>`;
+  });
+  html += `</ol></section>`;
+  v.innerHTML = html;
+}
+
+/* --- Jobs --- */
+function filteredJobs(section){
+  const f = S.filters[section] || "all", q = S.search.trim().toLowerCase();
+  return [...S.jobs.values()].filter(j => {
+    if (section === "installs" ? !isInstall(j) : section === "surveys" ? isInstall(j) : false) return false;
+    if (f === "togo"){ if (!TOGO.has(j.status)) return false; }
+    else if (f !== "all" && j.status !== f) return false;
+    if (!q) return true;
+    return [j.name, j.address, j.postcode, j.phone, j.notes].some(x => String(x||"").toLowerCase().includes(q));
+  }).sort((a,b) => (a.date||"9999").localeCompare(b.date||"9999") || (a.order??999)-(b.order??999) || String(a.postcode).localeCompare(String(b.postcode)));
+}
+const SECTION_FILTERS = {
+  surveys: [["togo","To go"],["new","To book"],["booked","Booked"],["noanswer","No answer"],["rebook","Rebook"],["surveyed","Surveyed"],["cancelled","Cancelled"],["all","All"]],
+  installs: [["all","All"],["ready","Ready to book"],["installbooked","Booked"],["installed","Installed"]],
+};
+function renderJobs(section){
+  const v = $("#v-"+section), mine = [...S.jobs.values()].filter(j => section === "installs" ? isInstall(j) : !isInstall(j));
+  const count = k => k === "all" ? mine.length : k === "togo" ? mine.filter(j => TOGO.has(j.status)).length : mine.filter(j => j.status === k).length;
+  const cur = S.filters[section];
+  let html = "";
+  if (section === "installs" && !mine.length && S.mode !== "loading"){
+    v.innerHTML = `<div class="pagehead"><h2>Installs</h2><p>Loft insulation jobs, from ready to book through to installed.</p></div>
+      <div class="empty"><strong>No install jobs yet.</strong>
+      <span>When a surveyed house gets the go-ahead, open it under Surveys and tap <b>Ready for install</b>. It moves here so you can give it an install day. You can also paste a list of install jobs.</span>
+      <div class="row" style="justify-content:center"><a class="btn primary" href="#add" data-act="addkind" data-k="install">Add install jobs</a><a class="btn" href="#surveys">Go to surveys</a></div></div>`;
+    return;
+  }
+  html += `<input type="search" id="search" placeholder="Search name, street, postcode or phone" value="${esc(S.search)}" aria-label="Search jobs">
+    <div class="filters" role="group" aria-label="Filter by status">${SECTION_FILTERS[section].map(([k,l]) => `<button type="button" data-act="filter" data-sec="${section}" data-f="${k}" aria-pressed="${cur===k}">${esc(l)}<b>${count(k)}</b></button>`).join("")}</div>`;
+  if (S.mode === "loading"){ v.innerHTML = html + `<div class="empty"><span class="spin"></span>Loading your jobs…</div>`; return; }
+  const list = filteredJobs(section);
+  if (!mine.length) html += `<div class="empty"><strong>No surveys yet.</strong><span>Tap + to paste your customer list.</span><a class="btn primary" href="#add">Add jobs</a></div>`;
+  else if (!list.length) html += `<div class="empty">Nothing here. Try another filter or search.</div>`;
+  else html += `<ul class="jobs">${list.map(j => `<li><button class="jobrow" type="button" data-act="open" data-id="${j.id}">
+      <span><strong>${esc(j.address)}</strong>, ${esc(j.postcode)}</span>${pillHtml(j.status)}
+      <span class="sub">${esc(j.name || "Name not given")}${j.phone ? " · " + esc(j.phone) : ""} · ${j.date ? esc(shortDate(j.date)) : "No date yet"}${j.window ? " · " + esc(j.window) : ""}</span>
+    </button></li>`).join("")}</ul>`;
+  html += `<div class="row"><button class="btn" type="button" data-act="newjob" data-k="${section === "installs" ? "install" : "survey"}">Add one by hand</button></div>`;
+  v.innerHTML = html;
+}
+function renderSettings(){
+  const all = [...S.jobs.values()];
+  $("#v-settings").innerHTML = `<div class="card"><span class="label">Appearance</span>
+      <div class="seg" role="group" aria-label="Appearance"><button type="button" data-act="theme" data-t="dark">Dark</button><button type="button" data-act="theme" data-t="light">Light</button><button type="button" data-act="theme" data-t="auto">Match phone</button></div></div>
+    ${settingsHtml().replace('<details class="card"><summary><strong>Settings</strong> <span class="muted">home, visit lengths, travel</span></summary>','<div class="card"><span class="label">Planning</span>').replace('</div></details>','</div></div>')}
+    <div class="card"><span class="label">Your data</span>
+      <p class="muted">${all.length} jobs saved. ${S.mode === "cloud" ? "Saved to your Claude account." : "Saved on this device only."}</p>
+      <button class="btn" type="button" data-act="export" ${all.length ? "" : "disabled"}>Download all jobs as a spreadsheet (CSV)</button></div>
+    ${STANDALONE ? `<div class="card"><span class="label">Back up</span>
+      <p class="muted">Your jobs live on this phone. Save a backup now and then (and before changing phones) so nothing is lost.</p>
+      <button class="btn primary" type="button" data-act="backup" ${all.length ? "" : "disabled"}>Save a backup file</button></div>` : `<div class="card"><span class="label">Move jobs to the WK app</span>
+      <p class="muted">Copies every job, day and setting so you can paste them into the installable WK Loft Jobs app. Nothing is removed from here.</p>
+      <div class="row"><button class="btn primary" type="button" data-act="copyall" ${all.length ? "" : "disabled"}>Copy all jobs</button><button class="btn" type="button" data-act="backup" ${all.length ? "" : "disabled"}>Download backup file</button></div>
+      <textarea id="copybox" hidden readonly style="min-height:90px" aria-label="Jobs to copy"></textarea></div>`}
+    <div class="card"><span class="label">Bring jobs in</span>
+      <p class="muted">${STANDALONE ? "Paste a planned day that Claude sent you, the jobs you copied from the Claude version, or choose a backup file." : "Paste jobs copied from the WK app, or choose a backup file."} Jobs already here are kept and only updated if the pasted copy is newer.</p>
+      <textarea id="importbox" style="min-height:90px" placeholder="Paste here" aria-label="Paste jobs to import"></textarea>
+      <div class="row"><button class="btn primary" type="button" data-act="import">Import jobs</button><label class="btn" for="importfile">Choose backup file<input type="file" id="importfile" accept=".json,application/json" hidden></label></div></div>`;
+  applyTheme(THEME);
+}
+function settingsHtml(){
+  const c = S.cfg;
+  return `<details class="card"><summary><strong>Settings</strong> <span class="muted">home, visit lengths, travel</span></summary>
+    <div class="grid2">
+      <label class="f" for="cfg-home">Home postcode<input id="cfg-home" data-cfg="home" value="${esc(c.home)}"></label>
+      <label class="f" for="cfg-leave">Usual leaving time<input id="cfg-leave" type="time" data-cfg="leave" value="${esc(c.leave)}"></label>
+      <label class="f" for="cfg-survey">Survey length (min)<input id="cfg-survey" type="number" inputmode="numeric" data-cfg="surveyMins" value="${c.surveyMins}"></label>
+      <label class="f" for="cfg-install">Install length (min)<input id="cfg-install" type="number" inputmode="numeric" data-cfg="installMins" value="${c.installMins}"></label>
+      <label class="f" for="cfg-travel">Home to work area (min)<input id="cfg-travel" type="number" inputmode="numeric" data-cfg="travelMins" value="${c.travelMins}"></label>
+      <label class="f" for="cfg-dark">Gets dark at<input id="cfg-dark" type="time" data-cfg="dark" value="${esc(c.dark)}"></label>
+    </div></details>`;
+}
+
+/* --- Add --- */
+function renderAdd(){
+  const v = $("#v-add");
+  const draft = lsGet("loftjobs-draft", {text:"", date:""});
+  const inst = S.addKind === "install";
+  let html = `<div class="seg" role="group" aria-label="Type of job" style="grid-template-columns:1fr 1fr"><button type="button" data-act="addkind" data-k="survey" aria-pressed="${!inst}">Surveys</button><button type="button" data-act="addkind" data-k="install" aria-pressed="${inst}">Installs</button></div>
+    <div><h2>${inst ? "Add install jobs" : "Add surveys from a list"}</h2><p class="muted">Paste customers however you have them: a text from the office, an email, a spreadsheet copy. Addresses, postcodes, names, phone numbers, time windows and notes are picked out for you to check.</p></div>
+    <label class="f" for="paste">Customer list<textarea id="paste" placeholder="12 Example Street, DN16 1AA&#10;Jane Smith 07700 900123&#10;9am to 12:30&#10;&#10;14 Example Street DN16 1AB&#10;John Brown 07700 900456, call 1hr before">${esc(draft.text)}</textarea></label>
+    <div class="grid2">
+      <label class="f" for="pastedate">${inst ? "Install day" : "Survey day"}<input type="date" id="pastedate" value="${esc(draft.date)}"></label>
+      <div style="display:flex;align-items:flex-end"><button class="btn primary" style="width:100%" type="button" data-act="parse" ${S.busy ? "disabled" : ""}>${S.busy === "parse" ? `<span class="spin"></span> Reading the list…` : "Read the list"}</button></div>
+    </div>
+    <p class="muted" style="font-size:.9rem">Leave the day blank to add them as ${inst ? "Ready to book" : "To book"}. If the list says the day, that is used instead.</p>`;
+  if (S.parsed){
+    const P = S.parsed, keep = P.filter(p => p.keep).length;
+    const existing = [...S.jobs.values()];
+    html += `<section class="preview"><h3>Check before adding (${P.length} found)</h3>${P.length ? "" : `<div class="empty">No addresses with postcodes found. Check the list has postcodes.</div>`}`;
+    P.forEach((p, i) => {
+      const dup = existing.find(j => normPc(j.postcode) === normPc(p.postcode) && String(j.address).toLowerCase().split(/[ ,]/)[0] === String(p.address).toLowerCase().split(/[ ,]/)[0] && String(j.address).toLowerCase().includes(String(p.address).toLowerCase().split(/[ ,]/).slice(1,2).join("")));
+      html += `<label class="pv" for="pv-${i}"><input type="checkbox" id="pv-${i}" data-act="pvkeep" data-i="${i}" ${p.keep ? "checked" : ""}>
+        <span class="body"><span class="addr">${esc(p.address)}, ${esc(p.postcode)}</span>
+        <span class="who">${esc(p.name || "Name not given")}${p.phone ? " · " + esc(p.phone) : ""} · ${p.mins || 15} min${p.date ? " · " + esc(shortDate(p.date)) : ""}</span>
+        ${p.window ? `<span class="window tight">Window: ${esc(p.window)}</span>` : ""}
+        ${p.notes ? `<span class="note">${esc(p.notes)}</span>` : ""}
+        ${dup ? `<span class="dup">Already in your jobs (${esc(ST[dup.status]?.label || "")}${dup.date ? ", " + esc(shortDate(dup.date)) : ""}). Untick to skip.</span>` : ""}</span></label>`;
+    });
+    html += `<div class="row"><button class="btn primary" type="button" data-act="addparsed" ${keep ? "" : "disabled"}>Add ${keep} job${keep===1?"":"s"}</button><button class="btn" type="button" data-act="clearparsed">Discard</button></div></section>`;
+  }
+  v.innerHTML = html;
+}
+
+/* --- Job panel --- */
+function blankJob(){ return {id:newId(), name:"", address:"", postcode:"", phone:"", window:"", winStart:null, winEnd:null, mins:null, callAhead:null, notes:"", status:"new", date:null, order:null, created:new Date().toISOString(), history:[]}; }
+function openPanel(id){ S.openId = id; S.confirmDelete = false; $("#panel").hidden = false; document.body.style.overflow = "hidden"; renderPanel(id); $("#panel").scrollTop = 0; }
+function closePanel(){ $("#panel").hidden = true; document.body.style.overflow = ""; S.openId = null; S.draftJob = null; renderAll(); }
+function renderPanel(id, soft){
+  const j = S.jobs.get(id) || S.draftJob; if (!j){ closePanel(); return; }
+  if (soft && document.activeElement && $("#panel").contains(document.activeElement) && /INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)) return;
+  const isNew = !S.jobs.has(id), install = INSTALL_STAGE.has(j.status), sv = j.survey || {};
+  $("#panel").innerHTML = `<div class="panel-in">
+    <div class="row" style="justify-content:space-between"><button class="btn" type="button" data-act="close">‹ Back</button>${isNew ? "" : pillHtml(j.status)}</div>
+    <h2>${isNew ? "New job" : esc(j.address || "Job")}</h2>
+    ${isNew ? "" : `<div class="actions">
+      <a class="btn primary small" href="${navUrl(j)}" target="_blank" rel="noopener">Navigate</a>
+      ${j.phone ? `<a class="btn small" href="tel:${telOf(j.phone.split("/")[0])}">Call</a><button class="btn small" type="button" data-act="copy" data-ph="${esc(telOf(j.phone.split("/")[0]))}">Copy number</button>` : ""}
+      <a class="btn small" href="${CHECKLIST_URL}" target="_blank" rel="noopener">Survey checklist</a>
+    </div>
+    <div class="card"><span class="label">Status</span><div class="statusgrid">${STATUSES.map(s => `<button type="button" data-act="pst" data-s="${s.k}" aria-pressed="${j.status===s.k}">${s.label}</button>`).join("")}</div>
+      <p class="muted" style="font-size:.88rem">Rebook and Ready for install take the job off its day so you can give it a new one.</p></div>`}
+    <form id="jobform" class="card" autocomplete="off">
+      <span class="label">Customer</span>
+      <label class="f" for="jf-address">Address<input id="jf-address" name="address" value="${esc(j.address)}" required></label>
+      <div class="grid2">
+        <label class="f" for="jf-postcode">Postcode<input id="jf-postcode" name="postcode" value="${esc(j.postcode)}" required></label>
+        <label class="f" for="jf-phone">Phone<input id="jf-phone" name="phone" inputmode="tel" value="${esc(j.phone)}"></label>
+      </div>
+      <label class="f" for="jf-name">Name<input id="jf-name" name="name" value="${esc(j.name)}"></label>
+      <span class="label" style="margin-top:6px">Visit</span>
+      <div class="grid2">
+        <label class="f" for="jf-date">${install ? "Install day" : "Survey day"}<input id="jf-date" name="date" type="date" value="${esc(j.date || "")}"></label>
+        <label class="f" for="jf-mins">Minutes on site<input id="jf-mins" name="mins" type="number" inputmode="numeric" placeholder="${install ? S.cfg.installMins : S.cfg.surveyMins}" value="${j.mins ?? ""}"></label>
+      </div>
+      <label class="f" for="jf-window">Time window, as the customer said it<input id="jf-window" name="window" value="${esc(j.window)}" placeholder="e.g. 9am to 12:30, after 12:30"></label>
+      <div class="grid2">
+        <label class="f" for="jf-ws">Not before<input id="jf-ws" name="winStart" type="time" value="${esc(j.winStart || "")}"></label>
+        <label class="f" for="jf-we">Arrive by<input id="jf-we" name="winEnd" type="time" value="${esc(j.winEnd || "")}"></label>
+      </div>
+      <label class="f" for="jf-call">Call ahead (minutes before you arrive)<input id="jf-call" name="callAhead" type="number" inputmode="numeric" value="${j.callAhead ?? ""}" placeholder="Leave blank if not needed"></label>
+      <label class="f" for="jf-notes">Notes for the day<textarea id="jf-notes" name="notes" style="min-height:80px">${esc(j.notes)}</textarea></label>
+      ${isNew ? "" : `<span class="label" style="margin-top:6px">Survey findings</span>
+      <div class="grid2">
+        <label class="f" for="jf-area">Loft size (m²)<input id="jf-area" name="sv_area" inputmode="decimal" value="${esc(sv.area || "")}"></label>
+        <label class="f" for="jf-depth">Existing depth (mm)<input id="jf-depth" name="sv_depth" inputmode="numeric" value="${esc(sv.depth || "")}"></label>
+      </div>
+      ${install ? `<span class="label" style="margin-top:6px">Install</span>
+      <div class="grid2">
+        <label class="f" for="jf-target">Target depth (mm)<input id="jf-target" name="in_target" inputmode="numeric" value="${esc((j.install||{}).target || "270")}"></label>
+        <label class="f" for="jf-rolls">Rolls or bags needed<input id="jf-rolls" name="in_rolls" inputmode="numeric" value="${esc((j.install||{}).rolls || "")}"></label>
+      </div>
+      <label class="f" for="jf-inotes">Install notes (what was done, materials, sign-off)<textarea id="jf-inotes" name="in_notes" style="min-height:80px">${esc((j.install||{}).notes || "")}</textarea></label>` : ""}
+      <label class="f" for="jf-scope">Scope of work for the fitters<textarea id="jf-scope" name="sv_scope" style="min-height:90px" placeholder="Top up to 270 mm over 41.8 m². 2 fire hoods. Raise shower cable.">${esc(sv.scope || "")}</textarea></label>`}
+      <div class="row"><button class="btn primary" type="submit">${isNew ? "Add job" : "Save changes"}</button><button class="btn" type="button" data-act="close">Cancel</button></div>
+    </form>
+    ${isNew ? "" : `${(j.history||[]).length ? `<div class="card"><span class="label">History</span><div class="hist">${[...j.history].reverse().map(h => `<span>${esc(new Date(h.at).toLocaleString("en-GB",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"}))} · ${esc(ST[h.s]?.label || h.s)}${h.d ? " · " + esc(shortDate(h.d)) : ""}</span>`).join("")}</div></div>` : ""}
+      ${S.confirmDelete ? `<div class="confirm"><span class="grow">Delete this job for good?</span><button class="btn small" type="button" data-act="del-yes">Delete</button><button class="btn small" type="button" data-act="del-no">Keep it</button></div>` : `<button class="btn ghost" type="button" data-act="del" style="color:var(--warn);width:fit-content">Delete job</button>`}`}
+  </div>`;
+}
+
+/* ---------- actions ---------- */
+async function moveStop(id, dir){
+  const list = dayJobs(S.day), i = list.findIndex(j => j.id === id), k = i + dir;
+  if (i < 0 || k < 0 || k >= list.length) return;
+  [list[i], list[k]] = [list[k], list[i]];
+  // reorder: times between changed neighbours fall back to postcode estimates
+  const touched = new Set([i, k, i+1, k+1].filter(n => n < list.length));
+  for (let n = 0; n < list.length; n++){
+    const j = list[n], patch = {order:n};
+    if (touched.has(n)) patch.drive = guessDrive(n === 0 ? null : list[n-1], j);
+    if (j.order !== n || touched.has(n)) await writeJob({...j, ...patch});
+  }
+  renderAll();
+}
+async function planDay(){
+  const date = S.day, list = dayJobs(date);
+  if (!list.length) return;
+  S.busy = "plan"; renderAll();
+  let order = null, drive = null, leave = null, warning = "";
+  const sample = await getSample();
+  if (sample){
+    try {
+      const res = await sample.json(planPrompt(date, list), {modelTier:"default"});
+      if (Array.isArray(res?.order)){
+        const ids = res.order.filter(id => list.some(j => j.id === id));
+        list.forEach(j => { if (!ids.includes(j.id)) ids.push(j.id); });
+        order = ids; drive = Array.isArray(res.drive) ? res.drive.map(Number) : null; leave = toMin(res.leave) != null ? res.leave : null; warning = String(res.warning || "");
+      }
+    } catch(e){ if (e?.code === "not_granted") toast("Planning with Claude was turned off, so stops are sorted by postcode."); else toast("Couldn't plan with Claude right now, so stops are sorted by postcode."); }
+  }
+  if (!order){
+    // no Claude: keep each postcode sector together, visit sectors by their earliest window
+    const sec = j => normPc(j.postcode).slice(0,-2), groups = {};
+    list.forEach(j => (groups[sec(j)] ||= []).push(j));
+    const key = g => Math.min(...g.map(j => toMin(j.winEnd) ?? toMin(j.winStart) ?? 1440));
+    order = Object.values(groups).sort((a,b) => key(a) - key(b) || sec(a[0]).localeCompare(sec(b[0])))
+      .flatMap(g => g.sort((a,b) => (toMin(a.winStart) ?? 0) - (toMin(b.winStart) ?? 0) || String(a.address).replace(/^\S+\s/,"").localeCompare(String(b.address).replace(/^\S+\s/,"")) || String(a.address).localeCompare(String(b.address),"en",{numeric:true})))
+      .map(j => j.id);
+  }
+  for (let n = 0; n < order.length; n++){
+    const j = S.jobs.get(order[n]), prev = n ? S.jobs.get(order[n-1]) : null;
+    const d = drive && Number.isFinite(drive[n]) && drive[n] >= 0 ? Math.round(drive[n]) : guessDrive(prev, j);
+    await writeJob({...j, order:n, drive:d});
+  }
+  const stamp = new Date().toLocaleString("en-GB",{weekday:"short",hour:"2-digit",minute:"2-digit"});
+  await writeDay(date, {planned: stamp + (sample && drive ? "" : " by postcode"), warning, ...(leave ? {leave} : {})});
+  S.busy = ""; renderAll();
+  toast(leave ? `Planned. Suggested leaving time ${leave}.` : "Planned.");
+}
+async function parseList(){
+  const text = $("#paste").value.trim(), date = $("#pastedate").value || null;
+  if (!text){ toast("Paste a customer list first."); return; }
+  S.busy = "parse"; renderAdd();
+  let jobs = null;
+  const sample = await getSample();
+  if (sample){
+    try { const res = await sample.json(parsePrompt(text), {modelTier:"default"}); if (Array.isArray(res?.jobs)) jobs = res.jobs; }
+    catch(e){ toast("Couldn't read it with Claude, so a simpler reader was used. Check each job."); }
+  }
+  if (!jobs) jobs = fallbackParse(text);
+  S.parsed = jobs.filter(p => p && (p.address || p.postcode)).map(p => ({...p, postcode:normPc(p.postcode), date: p.date || date, keep:true}));
+  S.parsed.forEach(p => { const existing = [...S.jobs.values()].find(j => normPc(j.postcode) === p.postcode && String(j.address).toLowerCase().replace(/\W/g,"") === String(p.address).toLowerCase().replace(/\W/g,"")); if (existing) p.keep = false; });
+  S.busy = ""; renderAdd();
+}
+async function addParsed(){
+  const keep = S.parsed.filter(p => p.keep); if (!keep.length) return;
+  const now = new Date().toISOString();
+  for (const p of keep){
+    const ord = p.date ? dayJobs(p.date).length : null;
+    const inst = S.addKind === "install";
+    const status = inst ? (p.date ? "installbooked" : "ready") : (p.date ? "booked" : "new");
+    if (inst) p.mins = null;
+    await writeJob({id:newId(), name:p.name||"", address:p.address||"", postcode:p.postcode||"", phone:p.phone||"", window:p.window||"", winStart:toMin(p.winStart)!=null?p.winStart:null, winEnd:toMin(p.winEnd)!=null?p.winEnd:null, mins:Number(p.mins)||null, callAhead:Number(p.callAhead)||null, notes:p.notes||"", status, date:p.date||null, order:ord, created:now, history:[{at:now, s:status, d:p.date||null}]});
+  }
+  const firstDate = keep.find(p => p.date)?.date;
+  S.parsed = null; lsSet("loftjobs-draft", {text:"", date:""});
+  toast(`Added ${keep.length} job${keep.length===1?"":"s"}.`);
+  if (firstDate){ S.day = firstDate; S.autoDay = false; location.hash = "day"; } else if (S.addKind === "install"){ S.filters.installs = "ready"; location.hash = "installs"; } else { S.filters.surveys = "new"; location.hash = "surveys"; }
+}
+async function saveForm(form){
+  const id = S.openId, j = S.jobs.get(id) || S.draftJob, fd = new FormData(form);
+  const g = k => String(fd.get(k) ?? "").trim();
+  const date = g("date") || null;
+  let status = j.status;
+  if (date && !j.date){ if (["new","rebook","noanswer"].includes(status)) status = "booked"; if (status === "ready") status = "installbooked"; }
+  const n = {...j, address:g("address"), postcode:normPc(g("postcode")), phone:g("phone"), name:g("name"), window:g("window"),
+    winStart:g("winStart")||null, winEnd:g("winEnd")||null, mins:Number(g("mins"))||null, callAhead:Number(g("callAhead"))||null, notes:g("notes"), date};
+  if (date !== j.date){ n.order = date ? dayJobs(date).length : null; n.drive = null; }
+  if (fd.has("in_target")) n.install = {target:g("in_target"), rolls:g("in_rolls"), notes:g("in_notes")};
+  if (fd.has("sv_area")) n.survey = {area:g("sv_area"), depth:g("sv_depth"), scope:g("sv_scope")};
+  if (status !== j.status || !S.jobs.has(id)) n.history = [...(j.history||[]), {at:new Date().toISOString(), s:status, d:date}];
+  n.status = status;
+  await writeJob(n);
+  toast(S.jobs.has(id) ? "Saved." : "Job added.");
+  S.draftJob = null; closePanel();
+}
+function backupJson(){ return JSON.stringify({app:"wk-loft-jobs", v:1, at:new Date().toISOString(), jobs:[...S.jobs.values()], days:S.days, cfg:S.cfg}); }
+function saveFile(name, text, type){
+  const url = URL.createObjectURL(new Blob([text], {type}));
+  const a = document.createElement("a"); a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 4000); toast("Saved to your downloads.");
+}
+async function importJson(raw){
+  const a0 = raw.indexOf("{"), a1 = raw.lastIndexOf("}");
+  if (a0 >= 0 && a1 > a0) raw = raw.slice(a0, a1 + 1);
+  let d; try { d = JSON.parse(raw); } catch(e){ toast("That doesn't look like a WK jobs backup. Copy it again from the old app."); return; }
+  if (!d || d.app !== "wk-loft-jobs" || !Array.isArray(d.jobs)){ toast("That doesn't look like a WK jobs backup."); return; }
+  let added = 0, updated = 0;
+  for (const j of d.jobs){
+    if (!j || !j.id) continue;
+    const cur = S.jobs.get(j.id);
+    const newer = !cur || String((j.history||[]).slice(-1)[0]?.at || "") >= String((cur.history||[]).slice(-1)[0]?.at || "");
+    if (!cur) added++; else if (newer) updated++;
+    if (newer) S.jobs.set(j.id, j);
+  }
+  S.days = d.plan ? {...S.days, ...(d.days||{})} : {...(d.days||{}), ...S.days};
+  if (!S.jobs.size || added === d.jobs.length) S.cfg = {...DEFAULT_CFG, ...(d.cfg||{})};
+  if (S.mode === "cloud" && db){ for (const j of d.jobs) if (S.jobs.get(j.id) === j) await writeJob(j); for (const k of Object.keys(d.days||{})) await writeDay(k, S.days[k]); }
+  else localSave();
+  $("#importbox").value = "";
+  const firstDay = d.plan ? d.jobs.map(j => j.date).filter(Boolean).sort()[0] : null;
+  toast(d.plan ? `Added ${added} job${added===1?"":"s"}${updated ? `, updated ${updated}` : ""}. Route ready.` : `Imported: ${added} new, ${updated} updated.`);
+  if (firstDay){ S.day = firstDay; S.autoDay = false; location.hash = "day"; } else renderAll();
+}
+function csv(){
+  const cols = ["status","date","name","address","postcode","phone","window","notes","mins","loft_m2","depth_mm","scope"];
+  const cell = v => { const s = String(v ?? ""); return /[",\n]/.test(s) ? `"${s.replace(/"/g,'""')}"` : s; };
+  const rows = [...S.jobs.values()].sort((a,b) => (a.date||"9999").localeCompare(b.date||"9999")).map(j => [ST[j.status]?.label, j.date, j.name, j.address, j.postcode, j.phone, j.window, j.notes, visitMins(j), j.survey?.area, j.survey?.depth, j.survey?.scope].map(cell).join(","));
+  return [cols.join(","), ...rows].join("\n");
+}
+
+document.addEventListener("click", async e => {
+  const b = e.target.closest("[data-act]"); if (!b) return;
+  const a = b.dataset.act, id = b.dataset.id;
+  if (a.startsWith("day-") || a === "goto") S.autoDay = false;
+  if (a === "pvkeep"){ S.parsed[+b.dataset.i].keep = b.checked; const n = S.parsed.filter(p => p.keep).length, btn = document.querySelector('[data-act="addparsed"]'); if (btn){ btn.textContent = `Add ${n} job${n===1?"":"s"}`; btn.disabled = !n; } return; }
+  if (a === "day-prev"){ S.day = addDays(S.day, -1); renderAll(); }
+  else if (a === "day-next"){ S.day = addDays(S.day, 1); renderAll(); }
+  else if (a === "goto"){ S.day = b.dataset.d; renderAll(); }
+  else if (a === "plan") planDay();
+  else if (a === "up" || a === "down") moveStop(id, a === "up" ? -1 : 1);
+  else if (a === "st"){
+    const j = S.jobs.get(id); if (!j) return;
+    const s = b.dataset.s;
+    await setStatus(j, s); toast(`Marked ${ST[s].label.toLowerCase()}.`); renderAll();
+  }
+  else if (a === "undo"){
+    const j = S.jobs.get(id); if (!j) return;
+    const prev = [...(j.history||[])].reverse().find(h => h.s === "booked" || h.s === "installbooked");
+    await setStatus(j, prev ? prev.s : "booked"); toast("Undone."); renderAll();
+  }
+  else if (a === "gonext"){
+    if (S.view !== "day"){ location.hash = "day"; await new Promise(r => setTimeout(r, 50)); }
+    const el = document.querySelector(".stop.next");
+    if (el) el.scrollIntoView({behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block:"center"});
+  }
+  else if (a === "filter-togo"){ S.filters.surveys = "togo"; if (S.view !== "surveys") location.hash = "surveys"; else renderJobs("surveys"); }
+  else if (a === "menu") menu($("#drawer").hidden);
+  else if (a === "menu-close") menu(false);
+  else if (a === "theme"){ THEME = b.dataset.t; lsSet("loftjobs-theme", THEME); applyTheme(THEME); }
+  else if (a === "fab"){ S.addKind = S.view === "installs" ? "install" : "survey"; location.hash = "add"; }
+  else if (a === "addkind"){ S.addKind = b.dataset.k; if (S.view === "add") renderAdd(); }
+  else if (a === "open") openPanel(id);
+  else if (a === "close") closePanel();
+  else if (a === "pst"){
+    const j = S.jobs.get(S.openId); if (!j) return;
+    const s = b.dataset.s, extra = {};
+    if (s === "rebook" || s === "ready" || s === "new"){ extra.date = null; extra.order = null; extra.drive = null; }
+    await setStatus(j, s, extra); renderPanel(S.openId); toast(`Now: ${ST[s].label}.`);
+  }
+  else if (a === "del"){ S.confirmDelete = true; renderPanel(S.openId); }
+  else if (a === "del-no"){ S.confirmDelete = false; renderPanel(S.openId); }
+  else if (a === "del-yes"){ await removeJob(S.openId); toast("Job deleted."); closePanel(); }
+  else if (a === "newjob"){ S.draftJob = blankJob(); if (b.dataset.k === "install") S.draftJob.status = "ready"; openPanel(S.draftJob.id); }
+  else if (a === "filter"){ S.filters[b.dataset.sec] = b.dataset.f; renderJobs(b.dataset.sec); }
+  else if (a === "parse") parseList();
+  else if (a === "addparsed") addParsed();
+  else if (a === "clearparsed"){ S.parsed = null; renderAdd(); }
+  else if (a === "copy"){
+    const ph = b.dataset.ph, reset = () => setTimeout(() => b.textContent = "Copy number", 1500);
+    try { await navigator.clipboard.writeText(ph); b.textContent = "Copied"; } catch(err){ b.textContent = ph; }
+    reset();
+  }
+  else if (a === "export" && STANDALONE){ saveFile(`wk-loft-jobs-${todayYmd()}.csv`, csv(), "text/csv"); }
+  else if (a === "backup"){
+    if (STANDALONE) saveFile(`wk-loft-jobs-backup-${todayYmd()}.json`, backupJson(), "application/json");
+    else {
+      try { if (downloads === null) downloads = window.claude?.use ? await window.claude.use("downloads") : null; } catch(err){ downloads = null; }
+      if (!downloads){ toast("Downloads aren't available here. Use Copy instead."); return; }
+      try { await downloads.save({filename:`wk-loft-jobs-backup-${todayYmd()}.json`, data:backupJson()}); toast("Backup saved."); }
+      catch(err){ if (err?.code !== "declined") toast("Couldn't save the file."); }
+    }
+  }
+  else if (a === "copyall"){
+    const txt = backupJson();
+    try { await navigator.clipboard.writeText(txt); toast(`Copied ${S.jobs.size} jobs. Paste them into the new app.`); }
+    catch(err){ const t = $("#copybox"); t.hidden = false; t.value = txt; t.focus(); t.select(); toast("Select all and copy the text in the box."); }
+  }
+  else if (a === "import"){
+    const raw = ($("#importbox").value || "").trim();
+    if (!raw){ toast("Paste your jobs or choose a backup file first."); return; }
+    await importJson(raw);
+  }
+  else if (a === "export"){
+    try { if (downloads === null) downloads = window.claude?.use ? await window.claude.use("downloads") : null; } catch(err){ downloads = null; }
+    if (!downloads){ toast("Downloads aren't available here."); return; }
+    try { await downloads.save({filename:`loft-jobs-${todayYmd()}.csv`, data:csv()}); toast("Spreadsheet saved."); }
+    catch(err){ if (err?.code !== "declined") toast("Couldn't save the file."); }
+  }
+});
+document.addEventListener("change", e => {
+  const t = e.target;
+  if (t.id === "daypick" && t.value){ S.autoDay = false; S.day = t.value; renderAll(); }
+  else if (t.id === "leave" && toMin(t.value) != null){ writeDay(S.day, {leave:t.value}).then(renderDay); }
+  else if (t.dataset.cfg){ const k = t.dataset.cfg, v = ["surveyMins","installMins","travelMins"].includes(k) ? Math.max(1, Number(t.value)||DEFAULT_CFG[k]) : (k === "home" ? normPc(t.value) : t.value); writeCfg({[k]:v}); toast("Settings saved."); }
+  else if (t.id === "importfile" && t.files[0]){ t.files[0].text().then(importJson); t.value = ""; }
+  else if (t.id === "pastedate") lsSet("loftjobs-draft", {text:$("#paste").value, date:t.value});
+});
+document.addEventListener("input", e => {
+  const t = e.target;
+  if (t.id === "search"){ S.search = t.value; const pos = t.selectionStart; renderJobs(S.view); const s = $("#search"); s.focus(); try { s.setSelectionRange(pos,pos); } catch(err){} }
+  else if (t.id === "paste") lsSet("loftjobs-draft", {text:t.value, date:$("#pastedate").value});
+});
+document.addEventListener("submit", e => { if (e.target.id === "jobform"){ e.preventDefault(); saveForm(e.target); } });
+document.addEventListener("keydown", e => { if (e.key !== "Escape") return; if (!$("#drawer").hidden) menu(false); else if (!$("#panel").hidden) closePanel(); });
+window.addEventListener("hashchange", () => setView(location.hash.slice(1)));
+
+setView(location.hash.slice(1) || "day");
+initStore();
+</script>
+
+<script>
+if ("serviceWorker" in navigator) addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
+</script>
+</body>
+</html>
