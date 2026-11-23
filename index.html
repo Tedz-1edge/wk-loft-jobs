@@ -709,7 +709,7 @@ function renderAdd(){
   const draft = lsGet("loftjobs-draft", {text:"", date:""});
   const inst = S.addKind === "install";
   let html = `<div class="seg" role="group" aria-label="Type of job" style="grid-template-columns:1fr 1fr"><button type="button" data-act="addkind" data-k="survey" aria-pressed="${!inst}">Surveys</button><button type="button" data-act="addkind" data-k="install" aria-pressed="${inst}">Installs</button></div>
-    <div><h2>${inst ? "Add install jobs" : "Add surveys from a list"}</h2><p class="muted">Paste customers however you have them: a text from the office, an email, a spreadsheet copy. Addresses, postcodes, names, phone numbers, time windows and notes are picked out for you to check.</p></div>
+    <div><h2>${inst ? "Add install jobs" : "Add surveys from a list"}</h2><p class="muted">Paste customers however you have them: a text from the office, an email, a spreadsheet copy. A planned day that Claude sent you goes here too. Addresses, postcodes, names, phone numbers, time windows and notes are picked out for you to check.</p></div>
     <label class="f" for="paste">Customer list<textarea id="paste" placeholder="12 Example Street, DN16 1AA&#10;Jane Smith 07700 900123&#10;9am to 12:30&#10;&#10;14 Example Street DN16 1AB&#10;John Brown 07700 900456, call 1hr before">${esc(draft.text)}</textarea></label>
     <div class="grid2">
       <label class="f" for="pastedate">${inst ? "Install day" : "Survey day"}<input type="date" id="pastedate" value="${esc(draft.date)}"></label>
@@ -843,6 +843,7 @@ async function planDay(){
 async function parseList(){
   const text = $("#paste").value.trim(), date = $("#pastedate").value || null;
   if (!text){ toast("Paste a customer list first."); return; }
+  if (/"app"\s*:\s*"wk-loft-jobs"/.test(text)){ await importJson(text); lsSet("loftjobs-draft", {text:"", date:""}); $("#paste") && ($("#paste").value = ""); return; }
   S.busy = "parse"; renderAdd();
   let jobs = null;
   const sample = await getSample();
@@ -910,7 +911,7 @@ async function importJson(raw){
   if (!S.jobs.size || added === d.jobs.length) S.cfg = {...DEFAULT_CFG, ...(d.cfg||{})};
   if (S.mode === "cloud" && db){ for (const j of d.jobs) if (S.jobs.get(j.id) === j) await writeJob(j); for (const k of Object.keys(d.days||{})) await writeDay(k, S.days[k]); }
   else localSave();
-  $("#importbox").value = "";
+  if ($("#importbox")) $("#importbox").value = "";
   const firstDay = d.plan ? d.jobs.map(j => j.date).filter(Boolean).sort()[0] : null;
   toast(d.plan ? `Added ${added} job${added===1?"":"s"}${updated ? `, updated ${updated}` : ""}. Route ready.` : `Imported: ${added} new, ${updated} updated.`);
   if (firstDay){ S.day = firstDay; S.autoDay = false; location.hash = "day"; } else renderAll();
