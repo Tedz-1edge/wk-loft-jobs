@@ -118,6 +118,14 @@ label.f{display:flex;flex-direction:column;gap:4px;font-size:.9rem;color:var(--m
 .summary{display:flex;flex-wrap:wrap;gap:8px}
 .calls{background:var(--warn-bg);border-radius:12px;padding:14px 16px;display:flex;flex-direction:column;gap:8px}
 .calls h3{color:var(--warn)}
+.remind{position:fixed;left:12px;right:12px;top:calc(env(safe-area-inset-top,0px) + 64px);z-index:20;max-width:560px;margin:0 auto;background:var(--warn-bg);color:var(--fg);border:2px solid var(--warn);border-radius:16px;box-shadow:var(--shadow);padding:14px;display:flex;flex-direction:column;gap:10px}
+.why{position:fixed;inset:auto 0 0 0;z-index:21;background:var(--surface);border-top:1px solid var(--line);border-radius:20px 20px 0 0;box-shadow:var(--shadow);padding:16px 16px calc(env(safe-area-inset-bottom,0px) + 16px);display:flex;flex-direction:column;gap:10px;max-width:640px;margin:0 auto}
+.why .chips{display:flex;flex-wrap:wrap;gap:8px}
+.why .chips button{min-height:40px;border-radius:999px;border:1px solid var(--line);background:var(--raised);color:var(--fg);padding:0 12px;font:500 .92rem var(--body);cursor:pointer}
+.why .chips button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.report{white-space:pre-wrap;font:500 .9rem/1.45 ui-monospace,SFMono-Regular,Menlo,monospace;background:var(--raised);border:1px solid var(--line);border-radius:12px;padding:12px;max-height:50vh;overflow:auto;margin:0}
+.remind strong{color:var(--warn);font-size:1.05rem}
+.remind .row{display:flex;gap:8px;flex-wrap:wrap}
 .calls ul{margin:0;padding-left:1.1em;display:flex;flex-direction:column;gap:6px}
 .legs{display:flex;flex-direction:column;gap:8px}
 .leg{justify-content:space-between;width:100%}
@@ -508,7 +516,7 @@ function focusHtml(r, done, sch){
     return `<section class="focus" aria-label="Next job"><div class="eyebrow"><span>All ${r.length} done</span><span>${done} of ${r.length}</span></div>
       <div class="prog"><i style="width:100%"></i></div>
       <div class="faddr">That's the day finished.</div><div class="fwho">Head home to ${esc(S.cfg.home)}. Any no answers are under Surveys, ready to rebook.</div>
-      <div class="bigbtns"><a class="btn primary wide" href="${home}" target="_blank" rel="noopener">Drive home</a></div>${lastLine}</section>`;
+      <div class="bigbtns"><a class="btn primary wide" href="${home}" target="_blank" rel="noopener">Drive home</a><button class="btn wide" type="button" data-act="report">End of day report</button></div>${lastLine}</section>`;
   }
   const x = r[ni], j = x.j, install = INSTALL_STAGE.has(j.status), tel = j.phone ? telOf(j.phone.split("/")[0]) : "";
   return `<section class="focus" aria-label="Next job" aria-live="polite">
@@ -583,6 +591,12 @@ function renderDay(){
     else if (/\b(call|ring|phone)\b/i.test(j.notes || "") && !/intercom/i.test(j.notes||"")) calls.push(`<strong>${esc(j.name || j.address)}</strong> (${toHM(x.arrive)}): ${esc(j.notes)}`);
   });
   if (calls.length) html += `<section class="calls"><h3>Calls to make</h3><ul>${calls.map(c => `<li>${c}</li>`).join("")}</ul></section>`;
+  if (dayReminders(date).length) html += `<div class="card"><span class="label">Reminders</span>
+      <p class="muted" style="font-size:.9rem">${dayReminders(date).length} reminder${dayReminders(date).length>1?"s":""} for this day: a traffic check an hour before you leave, leaving time${calls.length ? ", calls" : ""} and time windows. ${remindOn() ? "The app will alert you while it's open." : "Turn on alerts in Settings to get them in the app."} To be sure you get them with the app closed, put them in your phone's calendar.</p>
+      <button class="btn" type="button" data-act="ics">Put this day's reminders in my calendar</button></div>`;
+  html += `<div class="card"><span class="label">End of day report</span>
+      <p class="muted" style="font-size:.9rem">What was done, what was missed and why. Email it to the office, share it or save it.</p>
+      <button class="btn${done === r.length ? " primary" : ""}" type="button" data-act="report">Make the report</button></div>`;
   // legs
   const H = encodeURIComponent(S.cfg.home + ", UK"), jobsInOrder = r.map(x => x.j), legs = [];
   for (let i = 0; i < jobsInOrder.length; i += 8){
@@ -675,6 +689,9 @@ function renderSettings(){
   $("#v-settings").innerHTML = `<div class="card"><span class="label">Appearance</span>
       <div class="seg" role="group" aria-label="Appearance"><button type="button" data-act="theme" data-t="dark">Dark</button><button type="button" data-act="theme" data-t="light">Light</button><button type="button" data-act="theme" data-t="auto">Match phone</button></div></div>
     ${settingsHtml().replace('<details class="card"><summary><strong>Settings</strong> <span class="muted">home, visit lengths, travel</span></summary>','<div class="card"><span class="label">Planning</span>').replace('</div></details>','</div></div>')}
+    <div class="card"><span class="label">Reminders</span>
+      <p class="muted">Alerts to check the traffic an hour before you set off, when to leave, when to ring customers who want notice, and when a time window is about to close. They pop up while the app is open on your phone. For reminders with the app closed, use "Put this day's reminders in my calendar" on the Today page.</p>
+      ${remindHtml()}</div>
     <div class="card"><span class="label">Your data</span>
       <p class="muted">${all.length} jobs saved. ${S.mode === "cloud" ? "Saved to your Claude account." : "Saved on this device only."}</p>
       <button class="btn" type="button" data-act="export" ${all.length ? "" : "disabled"}>Download all jobs as a spreadsheet (CSV)</button></div>
@@ -700,6 +717,8 @@ function settingsHtml(){
       <label class="f" for="cfg-install">Install length (min)<input id="cfg-install" type="number" inputmode="numeric" data-cfg="installMins" value="${c.installMins}"></label>
       <label class="f" for="cfg-travel">Home to work area (min)<input id="cfg-travel" type="number" inputmode="numeric" data-cfg="travelMins" value="${c.travelMins}"></label>
       <label class="f" for="cfg-dark">Gets dark at<input id="cfg-dark" type="time" data-cfg="dark" value="${esc(c.dark)}"></label>
+      <label class="f" for="cfg-me">Your name on reports<input id="cfg-me" data-cfg="myName" value="${esc(c.myName || "")}" placeholder="e.g. Tedz"></label>
+      <label class="f" for="cfg-rep">Send reports to (email)<input id="cfg-rep" type="email" inputmode="email" data-cfg="reportEmail" value="${esc(c.reportEmail || "")}" placeholder="office@company.co.uk"></label>
     </div></details>`;
 }
 
@@ -771,6 +790,7 @@ function renderPanel(id, soft){
         <label class="f" for="jf-we">Arrive by<input id="jf-we" name="winEnd" type="time" value="${esc(j.winEnd || "")}"></label>
       </div>
       <label class="f" for="jf-call">Call ahead (minutes before you arrive)<input id="jf-call" name="callAhead" type="number" inputmode="numeric" value="${j.callAhead ?? ""}" placeholder="Leave blank if not needed"></label>
+      ${isNew ? "" : `<label class="f" for="jf-outcome">What happened (goes in the end of day report)<textarea id="jf-outcome" name="outcome" style="min-height:60px" placeholder="e.g. No answer, card left. Customer wants a Saturday.">${esc(j.outcome || "")}</textarea></label>`}
       <label class="f" for="jf-notes">Notes for the day<textarea id="jf-notes" name="notes" style="min-height:80px">${esc(j.notes)}</textarea></label>
       ${isNew ? "" : `<span class="label" style="margin-top:6px">Survey findings</span>
       <div class="grid2">
@@ -881,6 +901,7 @@ async function saveForm(form){
     winStart:g("winStart")||null, winEnd:g("winEnd")||null, mins:Number(g("mins"))||null, callAhead:Number(g("callAhead"))||null, notes:g("notes"), date};
   if (date !== j.date){ n.order = date ? dayJobs(date).length : null; n.drive = null; }
   if (fd.has("in_target")) n.install = {target:g("in_target"), rolls:g("in_rolls"), notes:g("in_notes")};
+  if (fd.has("outcome")) n.outcome = g("outcome");
   if (fd.has("sv_area")) n.survey = {area:g("sv_area"), depth:g("sv_depth"), scope:g("sv_scope")};
   if (status !== j.status || !S.jobs.has(id)) n.history = [...(j.history||[]), {at:new Date().toISOString(), s:status, d:date}];
   n.status = status;
@@ -946,7 +967,8 @@ document.addEventListener("click", async e => {
   else if (a === "st"){
     const j = S.jobs.get(id); if (!j) return;
     const s = b.dataset.s;
-    await setStatus(j, s); toast(`Marked ${ST[s].label.toLowerCase()}.`); renderAll();
+    await setStatus(j, s); if (!WHY_FOR.has(s)) toast(`Marked ${ST[s].label.toLowerCase()}.`); renderAll();
+    if (WHY_FOR.has(s)) askWhy(id, s);
   }
   else if (a === "undo"){
     const j = S.jobs.get(id); if (!j) return;
@@ -960,6 +982,18 @@ document.addEventListener("click", async e => {
   }
   else if (a === "filter-togo"){ S.filters.surveys = "togo"; if (S.view !== "surveys") location.hash = "surveys"; else renderJobs("surveys"); }
   else if (a === "menu") menu($("#drawer").hidden);
+  else if (a === "why-pick"){ const t = $("#why-text"); const add = b.textContent; t.value = t.value && !t.value.includes(add) ? t.value + ". " + add : add; b.setAttribute("aria-pressed","true"); }
+  else if (a === "why-save"){ const j = S.jobs.get(b.dataset.id); const txt = ($("#why-text").value || "").trim(); $("#why")?.remove(); if (j && txt){ await writeJob({...j, outcome:txt}); toast("Reason saved for the report."); renderAll(); } }
+  else if (a === "why-skip") $("#why")?.remove();
+  else if (a === "report") openReport(S.day);
+  else if (a === "rep-copy"){ try { await navigator.clipboard.writeText(reportText(S.day)); toast("Report copied."); } catch(err){ toast("Couldn't copy. Use Share instead."); } }
+  else if (a === "rep-share"){ try { await navigator.share({title:reportSubject(S.day), text:reportText(S.day)}); } catch(err){} }
+  else if (a === "rep-dl") await saveReport(S.day);
+  else if (a === "remind-on") await remindEnable();
+  else if (a === "remind-off"){ lsSet("loftjobs-remind", false); renderAll(); toast("Reminders off."); }
+  else if (a === "remind-test") fireReminder({key:"test-"+Date.now(), title:"Test reminder", body:"Reminders are working. You'll get one like this when it's time to ring someone.", tel:""});
+  else if (a === "remind-x"){ $("#remind")?.remove(); }
+  else if (a === "ics") await saveIcs(S.day);
   else if (a === "menu-close") menu(false);
   else if (a === "theme"){ THEME = b.dataset.t; lsSet("loftjobs-theme", THEME); applyTheme(THEME); }
   else if (a === "fab"){ S.addKind = S.view === "installs" ? "install" : "survey"; location.hash = "add"; }
@@ -970,7 +1004,8 @@ document.addEventListener("click", async e => {
     const j = S.jobs.get(S.openId); if (!j) return;
     const s = b.dataset.s, extra = {};
     if (s === "rebook" || s === "ready" || s === "new"){ extra.date = null; extra.order = null; extra.drive = null; }
-    await setStatus(j, s, extra); renderPanel(S.openId); toast(`Now: ${ST[s].label}.`);
+    await setStatus(j, s, extra); renderPanel(S.openId); if (!WHY_FOR.has(s)) toast(`Now: ${ST[s].label}.`);
+    if (WHY_FOR.has(s)) askWhy(j.id, s);
   }
   else if (a === "del"){ S.confirmDelete = true; renderPanel(S.openId); }
   else if (a === "del-no"){ S.confirmDelete = false; renderPanel(S.openId); }
@@ -1028,6 +1063,175 @@ document.addEventListener("input", e => {
 document.addEventListener("submit", e => { if (e.target.id === "jobform"){ e.preventDefault(); saveForm(e.target); } });
 document.addEventListener("keydown", e => { if (e.key !== "Escape") return; if (!$("#drawer").hidden) menu(false); else if (!$("#panel").hidden) closePanel(); });
 window.addEventListener("hashchange", () => setView(location.hash.slice(1)));
+
+/* ---------- Reasons and end of day report ---------- */
+const WHY_FOR = new Set(["noanswer","rebook","cancelled"]);
+const WHY_CHIPS = {
+  noanswer:["Knocked, no answer","Card left","Rang, no reply","Left a voicemail","Couldn't find the address"],
+  rebook:["Customer asked for another day","No answer, office to rebook","Ran out of time","No loft access today","Customer not well"],
+  cancelled:["Customer cancelled","Not eligible","Already insulated","Refused the survey","Tenant, landlord said no"]};
+function askWhy(id, s){
+  const j = S.jobs.get(id); if (!j) return;
+  $("#why")?.remove();
+  const el = document.createElement("div"); el.id = "why"; el.className = "why"; el.setAttribute("role","dialog"); el.setAttribute("aria-label","Why");
+  el.innerHTML = `<strong>${esc(ST[s].label)}: ${esc(j.address)}</strong><span class="muted" style="font-size:.9rem">Add a reason for the report. Tap one or type your own.</span>
+    <div class="chips">${WHY_CHIPS[s].map(c => `<button type="button" data-act="why-pick">${esc(c)}</button>`).join("")}</div>
+    <textarea id="why-text" style="min-height:60px" placeholder="Anything else, e.g. neighbour says they're away till Friday">${esc(j.outcome || "")}</textarea>
+    <div class="row"><button class="btn primary grow" type="button" data-act="why-save" data-id="${j.id}">Save reason</button><button class="btn" type="button" data-act="why-skip">Skip</button></div>`;
+  document.body.appendChild(el);
+}
+function reportJobs(date){
+  return [...S.jobs.values()].filter(j => j.date === date || (j.history||[]).some(h => h.d === date))
+    .sort((a,b) => (a.date === date ? (a.order ?? 999) : 999) - (b.date === date ? (b.order ?? 999) : 999));
+}
+function changedAt(j, date){
+  const h = [...(j.history||[])].reverse().find(h => h.s === j.status); if (!h) return "";
+  const d = new Date(h.at); return ymd(d) === date ? toHM(d.getHours()*60 + d.getMinutes()) : "";
+}
+function reportSubject(date){ return `End of day report, ${niceDate(date)}${S.cfg.myName ? ", " + S.cfg.myName : ""}`; }
+function reportText(date){
+  const list = reportJobs(date), who = j => [j.address + (j.postcode ? ", " + j.postcode : ""), j.name].filter(Boolean).join(" - ");
+  const groups = [
+    ["Surveyed", list.filter(j => j.status === "surveyed" || (j.status === "ready" && j.date !== date && (j.history||[]).some(h => h.s === "surveyed")))],
+    ["Installed", list.filter(j => j.status === "installed")],
+    ["No answer", list.filter(j => j.status === "noanswer")],
+    ["To be rebooked", list.filter(j => j.status === "rebook")],
+    ["Cancelled", list.filter(j => j.status === "cancelled")],
+    ["Not visited", list.filter(j => ["booked","installbooked","new"].includes(j.status) && j.date === date)]];
+  const used = new Set(groups.flatMap(g => g[1].map(j => j.id)));
+  const other = list.filter(j => !used.has(j.id) && j.date === date);
+  if (other.length) groups.push(["Other", other]);
+  const lines = [`WK Loft Insulation: end of day report`, niceDate(date)];
+  if (S.cfg.myName) lines.push(`Surveyor: ${S.cfg.myName}`);
+  lines.push("", `${list.length} job${list.length === 1 ? "" : "s"} booked. ` + groups.filter(g => g[1].length).map(g => `${g[0]}: ${g[1].length}`).join(". ") + ".");
+  groups.forEach(([title, js]) => {
+    if (!js.length) return;
+    lines.push("", `${title.toUpperCase()} (${js.length})`);
+    js.forEach(j => {
+      const t = changedAt(j, date), sv = j.survey || {}, bits = [];
+      if (sv.area) bits.push(`Loft ${sv.area} m²`);
+      if (sv.depth) bits.push(`existing ${sv.depth} mm`);
+      if (sv.scope) bits.push(`Scope: ${sv.scope}`);
+      if (j.status === "installed" && (j.install||{}).notes) bits.push(j.install.notes);
+      lines.push(`- ${who(j)}${t ? " (" + t + ")" : ""}`);
+      if (bits.length) lines.push(`  ${bits.join(". ")}`);
+      if (j.outcome) lines.push(`  ${["noanswer","rebook","cancelled"].includes(j.status) ? "Reason" : "Note"}: ${j.outcome}`);
+    });
+  });
+  return lines.join("\n");
+}
+function openReport(date){
+  const txt = reportText(date), to = S.cfg.reportEmail || "";
+  const mail = `mailto:${encodeURIComponent(to).replace(/%40/g,"@")}?subject=${encodeURIComponent(reportSubject(date))}&body=${encodeURIComponent(txt)}`;
+  S.openId = null; $("#panel").hidden = false; document.body.style.overflow = "hidden";
+  $("#panel").innerHTML = `<div class="panel-in">
+    <div class="row" style="justify-content:space-between"><button class="btn" type="button" data-act="close">‹ Back</button></div>
+    <h2>End of day report</h2>
+    <p class="muted">${esc(niceDate(date))}. Add a reason to any job by opening it and filling in "What happened".${to ? "" : " Put the office email in Settings and Email will fill it in for you."}</p>
+    <pre class="report">${esc(txt)}</pre>
+    <div class="row">
+      <a class="btn primary" href="${esc(mail)}">Email${to ? " " + esc(to) : ""}</a>
+      ${navigator.share ? `<button class="btn" type="button" data-act="rep-share">Share</button>` : ""}
+      <button class="btn" type="button" data-act="rep-copy">Copy</button>
+      <button class="btn" type="button" data-act="rep-dl">Download</button>
+    </div></div>`;
+  $("#panel").scrollTop = 0;
+}
+async function saveReport(date){
+  const name = `wk-report-${date}.txt`, txt = reportText(date);
+  if (STANDALONE){ saveFile(name, txt, "text/plain"); return; }
+  try { if (downloads === null) downloads = window.claude?.use ? await window.claude.use("downloads") : null; } catch(err){ downloads = null; }
+  if (!downloads){ toast("Downloads aren't available here. Use Copy instead."); return; }
+  try { await downloads.save({filename:name, data:txt}); toast("Report saved."); }
+  catch(err){ if (err?.code !== "declined") toast("Couldn't save the file."); }
+}
+
+/* ---------- Reminders ---------- */
+function remindOn(){ return lsGet("loftjobs-remind", false) === true; }
+function remindHtml(){
+  const has = "Notification" in window, perm = has ? Notification.permission : "none", on = lsGet("loftjobs-remind", false) === true;
+  if (on) return `<p><strong>Reminders are on.</strong> ${perm === "granted" ? "You'll get a phone notification and a pop-up here." : "You'll get a pop-up here while the app is open (phone notifications aren't allowed, so check the app's notification setting on your phone)."}</p>
+    <div class="row"><button class="btn" type="button" data-act="remind-test">Send a test</button><button class="btn" type="button" data-act="remind-off">Turn off</button></div>`;
+  return `${!has && /iPhone|iPad/.test(navigator.userAgent) && !navigator.standalone ? `<p class="muted">On iPhone, notifications only work once the app is on your home screen. Open it from there and turn reminders on.</p>` : ""}
+    <button class="btn primary" type="button" data-act="remind-on">Turn on reminders</button>`;
+}
+async function remindEnable(){
+  lsSet("loftjobs-remind", true);
+  if ("Notification" in window && Notification.permission === "default"){ try { await Notification.requestPermission(); } catch(e){} }
+  renderAll();
+  toast("Notification" in window && Notification.permission === "granted" ? "Reminders on." : "Reminders on inside the app.");
+  remindTick();
+}
+function dayReminders(date){
+  const sch = schedule(date), meta = S.days[date] || {}, out = [];
+  const open = sch.rows.filter(x => !FINISHED.has(x.j.status));
+  if (!open.length) return out;
+  const who = j => j.name || j.address;
+  if (!sch.rows.some(x => FINISHED.has(x.j.status))){
+    const f = sch.rows[0].j, maps = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(S.cfg.home + ", UK")}&destination=${q(f)}&travelmode=driving`;
+    out.push({key:`${date}-traffic`, at: sch.leave - 60, title:"Check the traffic", body:`Look at Google Maps for the drive to ${f.address}, ${f.postcode}. The plan allows ${Number.isFinite(f.drive) ? f.drive : S.cfg.travelMins} minutes. If Maps says longer, set off that much earlier.`, tel:"", url:maps});
+  }
+  if (!sch.rows.some(x => FINISHED.has(x.j.status)))
+    out.push({key:`${date}-leave`, at: sch.leave - 10, title:`Leave at ${toHM(sch.leave)}`, body:`${sch.rows.length} visits today. First stop ${sch.rows[0].j.address} about ${toHM(sch.rows[0].arrive)}.`, tel:""});
+  open.forEach(x => {
+    const j = x.j;
+    if (j.callAhead) out.push({key:`${date}-call-${j.id}`, at: x.arrive - j.callAhead, title:`Ring ${who(j)} now`, body:`${j.address}. You're due about ${toHM(x.arrive)}. ${j.phone ? "Phone " + j.phone + "." : ""}`, tel:j.phone});
+    const we = toMin(j.winEnd);
+    if (we != null) out.push({key:`${date}-win-${j.id}`, at: we - 30, title:`${who(j)}: window closes soon`, body:`${j.address} needs you by ${toHM(we)}${j.window ? " (" + j.window + ")" : ""}. Planned for about ${toHM(x.arrive)}.`, tel:j.phone});
+  });
+  return out.sort((a,b) => a.at - b.at);
+}
+async function fireReminder(r){
+  const fired = lsGet("loftjobs-fired", {});
+  fired[r.key] = Date.now(); lsSet("loftjobs-fired", fired);
+  if ("Notification" in window && Notification.permission === "granted"){
+    const opt = {body:r.body, tag:r.key, renotify:true, requireInteraction:true, icon:"icons/icon-192.png", badge:"icons/icon-192.png", data:{url:location.href.split("#")[0] + "#day"}};
+    try { const reg = await navigator.serviceWorker?.getRegistration?.(); if (reg) await reg.showNotification(r.title, opt); else new Notification(r.title, opt); } catch(e){}
+  }
+  try { navigator.vibrate?.([300,150,300]); } catch(e){}
+  $("#remind")?.remove();
+  const el = document.createElement("div"); el.id = "remind"; el.className = "remind"; el.setAttribute("role","alert");
+  const tel = (r.tel || "").split("/")[0].replace(/[^\d+]/g, "");
+  el.innerHTML = `<strong>${esc(r.title)}</strong><span>${esc(r.body)}</span><div class="row">${tel ? `<a class="btn primary" href="tel:${tel}">Ring now</a>` : ""}${r.url ? `<a class="btn primary" href="${esc(r.url)}" target="_blank" rel="noopener">Open Google Maps</a>` : ""}<button class="btn" type="button" data-act="remind-x">OK</button></div>`;
+  document.body.appendChild(el);
+}
+function remindTick(){
+  if (lsGet("loftjobs-remind", false) !== true || S.mode === "loading") return;
+  const now = new Date(), date = ymd(now), mins = now.getHours()*60 + now.getMinutes();
+  const fired = lsGet("loftjobs-fired", {});
+  for (const k of Object.keys(fired)) if (Date.now() - fired[k] > 3*864e5) delete fired[k];
+  lsSet("loftjobs-fired", fired);
+  const due = dayReminders(date).filter(r => !fired[r.key] && r.at <= mins && mins - r.at <= 20);
+  if (!due.length) return;
+  due.slice(0,-1).forEach(r => { fired[r.key] = Date.now(); });
+  lsSet("loftjobs-fired", fired);
+  fireReminder(due[due.length-1]);
+}
+setInterval(remindTick, 30000);
+document.addEventListener("visibilitychange", () => { if (!document.hidden) remindTick(); });
+function icsText(date){
+  const pad = n => String(n).padStart(2,"0"), d = date.replace(/-/g,"");
+  const t = m => `${d}T${pad(Math.floor(m/60))}${pad(m%60)}00`;
+  const e = s => String(s).replace(/\\/g,"\\\\").replace(/[,;]/g, m => "\\" + m).replace(/\n/g,"\\n");
+  const stamp = new Date().toISOString().replace(/[-:]/g,"").replace(/\.\d+/,"");
+  const ev = dayReminders(date).map(r => ["BEGIN:VEVENT", `UID:${r.key}@wk-loft-jobs`, `DTSTAMP:${stamp}`, `DTSTART:${t(r.at)}`, `DTEND:${t(r.at + 5)}`, `SUMMARY:${e(r.title)}`, `DESCRIPTION:${e(r.body + (r.url ? "\n" + r.url : ""))}`, ...(r.url ? [`URL:${r.url}`] : []), "BEGIN:VALARM", "ACTION:DISPLAY", `DESCRIPTION:${e(r.title)}`, "TRIGGER:PT0M", "END:VALARM", "END:VEVENT"].join("\r\n"));
+  return ["BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//WK Loft Insulation//WK Loft Jobs//EN","CALSCALE:GREGORIAN","METHOD:PUBLISH", ...ev, "END:VCALENDAR"].join("\r\n") + "\r\n";
+}
+async function saveIcs(date){
+  const list = dayReminders(date);
+  if (!list.length){ toast("No reminders left for this day."); return; }
+  const name = `wk-reminders-${date}.ics`, txt = icsText(date);
+  if (STANDALONE){
+    const url = URL.createObjectURL(new Blob([txt], {type:"text/calendar"}));
+    const a = document.createElement("a"); a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 10000);
+    toast("Open the file and choose Add to calendar."); return;
+  }
+  try { if (downloads === null) downloads = window.claude?.use ? await window.claude.use("downloads") : null; } catch(err){ downloads = null; }
+  if (!downloads){ toast("Downloads aren't available here."); return; }
+  try { await downloads.save({filename:name, data:txt}); toast("Saved. Open it to add the reminders to your calendar."); }
+  catch(err){ if (err?.code !== "declined") toast("Couldn't save the file."); }
+}
 
 setView(location.hash.slice(1) || "day");
 initStore();
