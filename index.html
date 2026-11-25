@@ -503,6 +503,7 @@ function renderAll(){
   if (S.view === "add") renderAdd();
   if (S.view === "settings") renderSettings();
   if (!$("#panel").hidden && S.openId) renderPanel(S.openId, true);
+  clearTimeout(renderAll.t); renderAll.t = setTimeout(() => trafficSync(false), 1500);
 }
 function focusHtml(r, done, sch){
   const ni = r.findIndex(x => !FINISHED.has(x.j.status));
@@ -692,6 +693,7 @@ function renderSettings(){
     <div class="card"><span class="label">Reminders</span>
       <p class="muted">Alerts to check the traffic an hour before you set off, when to leave, when to ring customers who want notice, and when a time window is about to close. They pop up while the app is open on your phone. For reminders with the app closed, use "Put this day's reminders in my calendar" on the Today page.</p>
       ${remindHtml()}</div>
+    <div class="card" id="trafficcard"><span class="label">Live traffic alerts</span>${trafficHtml()}</div>
     <div class="card"><span class="label">Your data</span>
       <p class="muted">${all.length} jobs saved. ${S.mode === "cloud" ? "Saved to your Claude account." : "Saved on this device only."}</p>
       <button class="btn" type="button" data-act="export" ${all.length ? "" : "disabled"}>Download all jobs as a spreadsheet (CSV)</button></div>
@@ -982,6 +984,9 @@ document.addEventListener("click", async e => {
   }
   else if (a === "filter-togo"){ S.filters.surveys = "togo"; if (S.view !== "surveys") location.hash = "surveys"; else renderJobs("surveys"); }
   else if (a === "menu") menu($("#drawer").hidden);
+  else if (a === "traffic-on") await trafficEnable();
+  else if (a === "traffic-off"){ lsSet("loftjobs-traffic", false); renderSettings(); toast("Traffic alerts off on this phone."); }
+  else if (a === "traffic-test") await trafficTest();
   else if (a === "why-pick"){ const t = $("#why-text"); const add = b.textContent; t.value = t.value && !t.value.includes(add) ? t.value + ". " + add : add; b.setAttribute("aria-pressed","true"); }
   else if (a === "why-save"){ const j = S.jobs.get(b.dataset.id); const txt = ($("#why-text").value || "").trim(); $("#why")?.remove(); if (j && txt){ await writeJob({...j, outcome:txt}); toast("Reason saved for the report."); renderAll(); } }
   else if (a === "why-skip") $("#why")?.remove();
@@ -1144,6 +1149,79 @@ async function saveReport(date){
   if (!downloads){ toast("Downloads aren't available here. Use Copy instead."); return; }
   try { await downloads.save({filename:name, data:txt}); toast("Report saved."); }
   catch(err){ if (err?.code !== "declined") toast("Couldn't save the file."); }
+}
+
+/* ---------- Live traffic alerts (phone app only) ---------- */
+const TRAFFIC_URL_DEFAULT = "";
+const trafficUrl = () => String(lsGet("loftjobs-traffic-url", "") || TRAFFIC_URL_DEFAULT).replace(/\/+$/, "");
+const trafficOn = () => lsGet("loftjobs-traffic", false) === true;
+function trafficToken(){
+  let t = lsGet("loftjobs-traffic-token", "");
+  if (!t){ t = [...crypto.getRandomValues(new Uint8Array(24))].map(b => b.toString(16).padStart(2, "0")).join(""); lsSet("loftjobs-traffic-token", t); }
+  return t;
+}
+function trafficHtml(){
+  if (!STANDALONE) return `<p class="muted">Traffic alerts work in the WK app on your phone, not in this Claude version.</p>`;
+  const msg = S.trafficMsg ? `<p class="muted" style="font-size:.9rem">${esc(S.trafficMsg)}</p>` : "";
+  if (!trafficUrl()) return `<p class="muted">Not switched on yet. Claude is setting up the traffic checker.</p>`;
+  if (trafficOn()) return `<p><strong>On.</strong> Each work morning, Google's live traffic to your first stop is checked from 2½ hours before you leave. You'll get a notification saying set off earlier, leave later, or leave as planned, and again if the traffic changes a lot.</p>${msg}
+    <div class="row"><button class="btn" type="button" data-act="traffic-test">Check now and send a test</button><button class="btn" type="button" data-act="traffic-off">Turn off</button></div>`;
+  const iosBrowser = /iPhone|iPad/.test(navigator.userAgent) && !navigator.standalone;
+  return `<p class="muted">Get a notification each morning if traffic means you should set off earlier, or can leave later.${iosBrowser ? " On iPhone, open the app from its home screen icon first." : ""}</p>${msg}
+    <button class="btn primary" type="button" data-act="traffic-on">Turn on traffic alerts</button>`;
+}
+function trafficDays(){
+  const today = todayYmd(), out = [];
+  const dates = [...new Set([...S.jobs.values()].map(j => j.date).filter(d => d && d >= today))].sort().slice(0, 14);
+  for (const d of dates){
+    const sch = schedule(d), first = sch.rows[0];
+    if (!first || FINISHED.has(first.j.status) || !first.j.postcode) continue;
+    out.push({date:d, leave:toHM(sch.leave), dest:first.j.postcode, plannedMins:first.drive});
+  }
+  return out;
+}
+async function trafficPost(path, body){
+  const r = await fetch(trafficUrl() + path, {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({token:trafficToken(), ...body})});
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(d.error || `The traffic checker said ${r.status}`);
+  return d;
+}
+async function trafficSync(force){
+  if (!STANDALONE || !trafficOn() || !trafficUrl() || S.mode === "loading") return;
+  const body = {home:S.cfg.home, days:trafficDays()}, h = JSON.stringify(body);
+  if (!force && h === lsGet("loftjobs-traffic-sent", "")) return;
+  try { await trafficPost("/plan", body); lsSet("loftjobs-traffic-sent", h); } catch(e){ /* tries again next change */ }
+}
+function vapidBytes(k){ k = k.replace(/-/g, "+").replace(/_/g, "/"); while (k.length % 4) k += "="; return Uint8Array.from(atob(k), c => c.charCodeAt(0)); }
+async function trafficEnable(){
+  S.trafficMsg = "";
+  try {
+    if (!("serviceWorker" in navigator) || !("PushManager" in window) || !("Notification" in window))
+      throw new Error(/iPhone|iPad/.test(navigator.userAgent) ? "Open the WK app from its home screen icon, then try again. iPhones only allow alerts from there." : "This browser can't get alerts. Open the WK app from your home screen.");
+    if (Notification.permission !== "granted" && await Notification.requestPermission() !== "granted")
+      throw new Error("Notifications are blocked for the WK app. Allow them in your phone's settings, then try again.");
+    const reg = await navigator.serviceWorker.ready;
+    const {key} = await (await fetch(trafficUrl() + "/vapid")).json();
+    let sub = await reg.pushManager.getSubscription();
+    if (sub && sub.options?.applicationServerKey && btoa(String.fromCharCode(...new Uint8Array(sub.options.applicationServerKey))).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"") !== key){ await sub.unsubscribe(); sub = null; }
+    if (!sub) sub = await reg.pushManager.subscribe({userVisibleOnly:true, applicationServerKey:vapidBytes(key)});
+    await trafficPost("/register", {sub:sub.toJSON()});
+    lsSet("loftjobs-traffic", true); lsSet("loftjobs-traffic-sent", "");
+    await trafficSync(true);
+    S.trafficMsg = `Done. ${trafficDays().length ? "Your next working day is sent to the checker." : "Plan a day and it will be sent to the checker."}`;
+    toast("Traffic alerts on.");
+  } catch(e){ S.trafficMsg = e.message || "Couldn't turn traffic alerts on."; }
+  renderSettings();
+}
+async function trafficTest(){
+  S.trafficMsg = "Checking…"; renderSettings();
+  try {
+    await trafficSync(true);
+    const d = await trafficPost("/test", {});
+    S.trafficMsg = d.check ? `Live check for ${shortDate(d.next.date)}: ${d.check.title}. ${d.check.body}` : d.error ? `The traffic check failed: ${d.error}` : "Test sent. There's no planned day to check yet.";
+    if (!d.push?.ok) S.trafficMsg += ` The notification didn't go through (${d.push?.why || d.push?.status || "unknown"}). Try Turn off, then Turn on again.`;
+  } catch(e){ S.trafficMsg = e.message; }
+  renderSettings();
 }
 
 /* ---------- Reminders ---------- */

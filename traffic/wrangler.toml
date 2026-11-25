@@ -1,0 +1,12 @@
+name = "wk-traffic"
+main = "worker.js"
+compatibility_date = "2024-11-01"
+workers_dev = true
+
+# Every 10 minutes from 3am to 9:59am UTC (covers early starts all year in UK time).
+[triggers]
+crons = ["*/10 3-9 * * *"]
+
+[[kv_namespaces]]
+binding = "WK"
+id = "KV_ID_PLACEHOLDER"

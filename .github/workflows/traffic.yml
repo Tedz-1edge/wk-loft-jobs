@@ -1,0 +1,51 @@
+name: Deploy traffic checker
+on:
+  push:
+    branches: [main]
+    paths: ["traffic/**", ".github/workflows/traffic.yml"]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      GOOGLE_MAPS_KEY: ${{ secrets.GOOGLE_MAPS_KEY }}
+    defaults:
+      run:
+        working-directory: traffic
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check the secrets are there
+        id: have
+        run: |
+          missing=""
+          [ -n "$CLOUDFLARE_API_TOKEN" ] || missing="$missing CLOUDFLARE_API_TOKEN"
+          [ -n "$CLOUDFLARE_ACCOUNT_ID" ] || missing="$missing CLOUDFLARE_ACCOUNT_ID"
+          [ -n "$GOOGLE_MAPS_KEY" ] || missing="$missing GOOGLE_MAPS_KEY"
+          if [ -n "$missing" ]; then echo "::notice::Not deploying yet. Missing secrets:$missing"; echo "go=no" >> "$GITHUB_OUTPUT"; else echo "go=yes" >> "$GITHUB_OUTPUT"; fi
+      - uses: actions/setup-node@v4
+        if: steps.have.outputs.go == 'yes'
+        with:
+          node-version: 20
+      - name: Find or make the storage space
+        if: steps.have.outputs.go == 'yes'
+        run: |
+          id=$(npx -y wrangler@3 kv namespace list | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const a=JSON.parse(s.slice(s.indexOf("[")));const n=a.find(x=>x.title==="wk-traffic-WK"||x.title==="WK_TRAFFIC");console.log(n?n.id:"")})')
+          if [ -z "$id" ]; then
+            npx -y wrangler@3 kv namespace create WK_TRAFFIC >/dev/null
+            id=$(npx -y wrangler@3 kv namespace list | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const a=JSON.parse(s.slice(s.indexOf("[")));const n=a.find(x=>x.title==="WK_TRAFFIC");console.log(n?n.id:"")})')
+          fi
+          [ -n "$id" ] || { echo "::error::Couldn't make the KV storage space"; exit 1; }
+          sed -i "s/KV_ID_PLACEHOLDER/$id/" wrangler.toml
+      - name: Deploy
+        if: steps.have.outputs.go == 'yes'
+        run: |
+          npx -y wrangler@3 deploy 2>&1 | tee deploy.log
+          url=$(grep -oE 'https://[a-z0-9.-]+\.workers\.dev' deploy.log | head -1)
+          echo "::notice title=Traffic checker address::$url"
+      - name: Save the Google key on Cloudflare
+        if: steps.have.outputs.go == 'yes'
+        run: printf '%s' "$GOOGLE_MAPS_KEY" | npx -y wrangler@3 secret put GOOGLE_MAPS_KEY
