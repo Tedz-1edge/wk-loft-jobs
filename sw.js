@@ -1,5 +1,5 @@
 // WK Loft Jobs offline cache. Version changes with every app update.
-const CACHE = "wk-jobs-fd1eec30";
+const CACHE = "wk-jobs-2c317b58";
 const CORE = ["./", "index.html", "manifest.webmanifest", "icons/icon-192.png", "icons/icon-512.png", "icons/apple-touch-icon.png", "icons/favicon-32.png"];
 self.addEventListener("install", e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(CORE)).then(() => self.skipWaiting())); });
 self.addEventListener("activate", e => { e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim())); });
@@ -7,10 +7,22 @@ self.addEventListener("fetch", e => {
   const r = e.request; if (r.method !== "GET") return;
   const u = new URL(r.url);
   if (u.origin === location.origin){
-    // app files: try the network first so updates arrive, fall back to the saved copy offline
-    e.respondWith(fetch(r).then(res => { const c = res.clone(); caches.open(CACHE).then(k => k.put(r, c)); return res; }).catch(() => caches.match(r, {ignoreSearch:true}).then(m => m || caches.match("index.html"))));
+    // App files: use the network if it answers within 3 seconds, otherwise the saved copy,
+    // so a weak signal never leaves the app stuck on its start screen.
+    const saved = () => caches.match(r, {ignoreSearch:true}).then(m => m || caches.match("index.html"));
+    const net = fetch(r).then(res => { if (res.ok){ const c = res.clone(); caches.open(CACHE).then(k => k.put(r, c)); } return res; });
+    e.respondWith(new Promise(done => {
+      let settled = false; const finish = x => { if (!settled){ settled = true; done(x); } };
+      const t = setTimeout(() => saved().then(m => { if (m) finish(m); }), 3000);
+      net.then(res => { if (res.ok) { clearTimeout(t); finish(res); } else saved().then(m => finish(m || res)); })
+         .catch(() => { clearTimeout(t); saved().then(m => finish(m || Response.error())); });
+    }));
   } else if (u.hostname.endsWith("fonts.googleapis.com") || u.hostname.endsWith("fonts.gstatic.com")){
-    e.respondWith(caches.match(r).then(m => m || fetch(r).then(res => { const c = res.clone(); caches.open(CACHE).then(k => k.put(r, c)); return res; })));
+    // Fonts: saved copy first; if not saved and the network is slow, carry on without them.
+    e.respondWith(caches.match(r).then(m => m || Promise.race([
+      fetch(r).then(res => { if (res.ok){ const c = res.clone(); caches.open(CACHE).then(k => k.put(r, c)); } return res; }),
+      new Promise(ok => setTimeout(() => ok(new Response("", {status: 200, headers: {"Content-Type": u.hostname.endsWith("googleapis.com") ? "text/css" : "font/woff2"}})), 2500))
+    ]).catch(() => new Response("", {status: 200, headers: {"Content-Type": "text/css"}}))));
   }
 });
 self.addEventListener("push", e => {
