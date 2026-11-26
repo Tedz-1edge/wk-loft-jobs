@@ -188,6 +188,8 @@ ul.jobs{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;ga
 .statusgrid button{min-height:42px;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--fg);font:600 .92rem var(--body);cursor:pointer}
 .statusgrid button[aria-pressed="true"]{background:var(--fg);color:var(--bg);border-color:var(--fg)}
 .hist{font-size:.88rem;color:var(--muted);display:flex;flex-direction:column;gap:2px;font-variant-numeric:tabular-nums}
+.toast.undoable{display:flex;align-items:center;gap:12px;top:calc(env(safe-area-inset-top,0px) + 70px);bottom:auto;width:max-content}
+.toast.undoable button{border:0;background:var(--bg);color:var(--fg);font:700 1rem var(--body);border-radius:8px;min-height:40px;padding:0 14px;cursor:pointer}
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(16px + env(safe-area-inset-bottom,0px));background:var(--fg);color:var(--bg);padding:10px 16px;border-radius:10px;font-weight:600;z-index:30;max-width:calc(100% - 32px)}
 .confirm{background:var(--warn-bg);border-radius:10px;padding:10px 12px;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .spin{display:inline-block;width:14px;height:14px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:sp 1s linear infinite}
@@ -272,7 +274,21 @@ const q = j => encodeURIComponent(`${j.address}, ${j.postcode}, UK`);
 const navUrl = j => `https://www.google.com/maps/dir/?api=1&destination=${q(j)}&travelmode=driving`;
 const lsGet = (k, d) => { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch(e) { return d; } };
 const lsSet = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch(e) {} };
-function toast(msg){ const t = $("#toast"); t.textContent = msg; t.hidden = false; clearTimeout(toast.h); toast.h = setTimeout(() => t.hidden = true, 2200); }
+function toast(msg){ const t = $("#toast"); t.classList.remove("undoable"); t.textContent = msg; t.hidden = false; clearTimeout(toast.h); toast.h = setTimeout(() => t.hidden = true, 2200); }
+let UNDO = null;
+function toastUndo(msg, before){
+  UNDO = before ? (Array.isArray(before) ? before.map(x => ({...x})) : [{...before}]) : null;
+  const t = $("#toast"); t.classList.add("undoable");
+  t.innerHTML = `<span>${esc(msg)}</span>${UNDO ? `<button type="button" data-act="undo-change">Undo</button>` : ""}`;
+  t.hidden = false; clearTimeout(toast.h); toast.h = setTimeout(() => { t.hidden = true; UNDO = null; }, 8000);
+}
+function changeMsg(before, after){
+  if (!before) return "";
+  const where = before.address || "Job";
+  if (after.status === "cancelled" && before.status !== "cancelled") return `${where}: cancelled.`;
+  if (before.date && after.date !== before.date) return after.date ? `${where} moved to ${shortDate(after.date)}.` : `${where} taken off ${shortDate(before.date)}.`;
+  return "";
+}
 const todayYmd = () => ymd(new Date());
 
 /* ---------- theme (per device) ---------- */
@@ -349,17 +365,19 @@ function guessDrive(a, b){
   if (pa.split(" ")[0] === pb.split(" ")[0]) return 10;
   return 18;
 }
-function dayJobs(date){
-  return [...S.jobs.values()].filter(j => j.date === date && j.status !== "cancelled")
+function dayJobs(date, withCancelled){
+  return [...S.jobs.values()].filter(j => j.date === date && (withCancelled || j.status !== "cancelled"))
     .sort((a,b) => (a.order ?? 999) - (b.order ?? 999) || String(a.postcode).localeCompare(String(b.postcode)));
 }
 function schedule(date){
-  const list = dayJobs(date);
+  const list = dayJobs(date, true);
   const meta = S.days[date] || {};
   const leave = toMin(meta.leave || S.cfg.leave);
   let t = leave, prev = null;
   const rows = list.map((j, i) => {
-    const drive = Number.isFinite(j.drive) ? j.drive : guessDrive(prev, j);
+    if (j.status === "cancelled") return {j, i, drive:0, arrive:t, end:t, wait:0, late:false};
+    // The first real stop is always driven to from home: a short stored drive belongs to a stop that was moved up.
+    const drive = !prev ? (Number.isFinite(j.drive) && j.drive >= 30 ? j.drive : guessDrive(null, j)) : Number.isFinite(j.drive) ? j.drive : guessDrive(prev, j);
     let arrive = t + drive;
     const ws = toMin(j.winStart), we = toMin(j.winEnd);
     let wait = 0;
@@ -536,8 +554,9 @@ function focusHtml(r, done, sch){
       ${tel ? `<a class="btn" href="tel:${tel}">Call</a>` : `<button class="btn" type="button" disabled>No number</button>`}
       <button class="btn donebtn wide" type="button" data-act="st" data-s="${install ? "installed" : "surveyed"}" data-id="${j.id}">✓ ${install ? "Installed" : "Surveyed"}, next job</button>
       <button class="btn" type="button" data-act="st" data-s="noanswer" data-id="${j.id}">No answer</button>
-      <button class="btn" type="button" data-act="st" data-s="cancelled" data-id="${j.id}">Cancelled</button>
-      <button class="btn wide" type="button" data-act="open" data-id="${j.id}">Details</button>
+      <button class="btn" type="button" data-act="later" data-id="${j.id}">Customer in later</button>
+      <button class="btn" type="button" data-act="open" data-id="${j.id}">Details</button>
+      <button class="btn ghost" type="button" data-act="st" data-s="cancelled" data-id="${j.id}">Cancelled</button>
     </div>
     ${tel ? `<button class="btn small ghost" type="button" data-act="copy" data-ph="${esc(tel)}" style="width:fit-content">Copy number</button>` : ""}
     ${lastLine}
@@ -640,8 +659,9 @@ function renderDay(){
             ? `<button class="btn donebtn grow" type="button" data-act="st" data-s="installed" data-id="${j.id}">✓ Installed</button>`
             : `<button class="btn donebtn grow" type="button" data-act="st" data-s="surveyed" data-id="${j.id}">✓ Surveyed</button>`}
           <button class="btn" type="button" data-act="st" data-s="noanswer" data-id="${j.id}">No answer</button>
-          <button class="btn" type="button" data-act="st" data-s="cancelled" data-id="${j.id}">Cancelled</button>
+          <button class="btn" type="button" data-act="later" data-id="${j.id}">In later</button>
           <button class="btn ghost" type="button" data-act="open" data-id="${j.id}">Details</button>
+          <button class="btn ghost" type="button" data-act="st" data-s="cancelled" data-id="${j.id}">Cancelled</button>
         </div>`}
       </div></li>`;
   });
@@ -912,8 +932,10 @@ async function saveForm(form){
   if (fd.has("sv_area")) n.survey = {area:g("sv_area"), depth:g("sv_depth"), scope:g("sv_scope")};
   if (status !== j.status || !S.jobs.has(id)) n.history = [...(j.history||[]), {at:new Date().toISOString(), s:status, d:date}];
   n.status = status;
+  const was = S.jobs.get(id);
   await writeJob(n);
-  toast(S.jobs.has(id) ? "Saved." : "Job added.");
+  const m = changeMsg(was, n);
+  if (m) toastUndo(m, was); else toast(was ? "Saved." : "Job added.");
   S.draftJob = null; closePanel();
 }
 function backupJson(){ return JSON.stringify({app:"wk-loft-jobs", v:1, at:new Date().toISOString(), jobs:[...S.jobs.values()], days:S.days, cfg:S.cfg}); }
@@ -987,7 +1009,9 @@ document.addEventListener("click", async e => {
     const j = S.jobs.get(id); if (!j) return;
     const s = b.dataset.s;
     const asking = WHY_FOR.has(s) || (s === "surveyed" && !installOf(j));
-    await setStatus(j, s); if (!asking) toast(`Marked ${ST[s].label.toLowerCase()}.`); renderAll();
+    await setStatus(j, s); renderAll();
+    if (s === "cancelled" || s === "noanswer") toastUndo(`${j.address}: ${ST[s].label.toLowerCase()}.`, j);
+    else if (!asking) toast(`Marked ${ST[s].label.toLowerCase()}.`);
     if (WHY_FOR.has(s)) askWhy(id, s);
     else if (s === "surveyed" && !installOf(S.jobs.get(id))) askInstall(id, true);
   }
@@ -1005,6 +1029,19 @@ document.addEventListener("click", async e => {
   else if (a === "menu") menu($("#drawer").hidden);
   else if (a === "traffic-on") await trafficEnable();
   else if (a === "inst-ask") askInstall(id, false);
+  else if (a === "undo-change"){
+    if (!UNDO) return; const list = UNDO; UNDO = null; $("#toast").hidden = true; $("#why")?.remove();
+    for (const prev of list) await writeJob(prev);
+    S.day = list[0].date || S.day; renderAll(); if (list.some(x => x.id === S.openId)) renderPanel(S.openId); toast("Put back.");
+  }
+  else if (a === "later") askLater(id);
+  else if (a === "later-save" || a === "later-end"){
+    const j = S.jobs.get(b.dataset.id); if (!j) return;
+    const tm = $("#later-time")?.value || "";
+    if (a === "later-save" && !tm){ toast("Pick the time they'll be in."); return; }
+    $("#why")?.remove();
+    await customerLater(j, a === "later-end" ? "" : tm);
+  }
   else if (a === "inst-book" || a === "inst-ready"){
     const sj = S.jobs.get(b.dataset.id); if (!sj) return;
     const date = a === "inst-book" ? ($("#inst-date").value || "") : "";
@@ -1038,7 +1075,9 @@ document.addEventListener("click", async e => {
     const j = S.jobs.get(S.openId); if (!j) return;
     const s = b.dataset.s, extra = {};
     if (s === "rebook" || s === "ready" || s === "new"){ extra.date = null; extra.order = null; extra.drive = null; }
-    await setStatus(j, s, extra); renderPanel(S.openId); if (!WHY_FOR.has(s)) toast(`Now: ${ST[s].label}.`);
+    await setStatus(j, s, extra); renderPanel(S.openId);
+    const m = changeMsg(j, {...j, ...extra, status:s});
+    if (m) toastUndo(m, j); else if (!WHY_FOR.has(s)) toast(`Now: ${ST[s].label}.`);
     if (WHY_FOR.has(s)) askWhy(j.id, s);
   }
   else if (a === "del"){ S.confirmDelete = true; renderPanel(S.openId); }
@@ -1187,6 +1226,44 @@ async function saveReport(date){
   if (!downloads){ toast("Downloads aren't available here. Use Copy instead."); return; }
   try { await downloads.save({filename:name, data:txt}); toast("Report saved."); }
   catch(err){ if (err?.code !== "declined") toast("Couldn't save the file."); }
+}
+
+/* ---------- Customer in later ---------- */
+function askLater(id){
+  const j = S.jobs.get(id); if (!j) return;
+  $("#why")?.remove();
+  const el = document.createElement("div"); el.id = "why"; el.className = "why"; el.setAttribute("role","dialog"); el.setAttribute("aria-label","Customer in later");
+  el.innerHTML = `<strong>Customer in later: ${esc(j.address)}</strong><span class="muted" style="font-size:.9rem">Pick when they'll be in. The job moves to the right place in today's order and the times update.</span>
+    <label class="f" for="later-time">In from<input id="later-time" type="time" value="${esc(j.winStart || "")}"></label>
+    <div class="row"><button class="btn primary grow" type="button" data-act="later-save" data-id="${j.id}">Move it</button><button class="btn" type="button" data-act="later-end" data-id="${j.id}">Just do it last</button><button class="btn" type="button" data-act="why-skip">Cancel</button></div>`;
+  document.body.appendChild(el);
+  setTimeout(() => $("#later-time")?.focus(), 50);
+}
+async function customerLater(j, tm){
+  const before = {...j}, date = j.date || S.day;
+  const snap = dayJobs(date, true).map(x => ({...x}));
+  const others = dayJobs(date).filter(x => x.id !== j.id);
+  const n = {...j, winStart: tm || j.winStart || null, window: tm ? `In from ${tm}` : j.window, drive:null};
+  if (tm && toMin(j.winEnd) != null && toMin(j.winEnd) < toMin(tm)) n.winEnd = null;
+  // place it after every unfinished stop that would start before that time, and after all finished ones
+  let at = others.length;
+  if (tm){
+    S.jobs.set(j.id, {...n, date:null}); // leave it out while timing the others
+    const sch = schedule(date), t = toMin(tm);
+    at = 0;
+    sch.rows.forEach((x, i) => { if (x.j.status === "cancelled" || FINISHED.has(x.j.status) || x.arrive < t) at = i + 1; });
+    at = Math.min(at, others.length);
+    S.jobs.set(j.id, before);
+  }
+  const order = [...others]; order.splice(at, 0, n);
+  for (let i = 0; i < order.length; i++){
+    const x = order[i], cur = x.id === n.id ? n : S.jobs.get(x.id);
+    const want = {...cur, order:i, ...(i === at + 1 ? {drive:null} : {})};
+    if (x.id === n.id || cur.order !== i || i === at + 1) await writeJob(want);
+  }
+  renderAll();
+  const pos = dayJobs(date).findIndex(x => x.id === j.id) + 1;
+  toastUndo(`${j.address} moved to stop ${pos}${tm ? ", in from " + tm : ""}.`, snap);
 }
 
 /* ---------- Book an install straight from a survey ---------- */
