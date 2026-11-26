@@ -536,7 +536,8 @@ function focusHtml(r, done, sch){
       ${tel ? `<a class="btn" href="tel:${tel}">Call</a>` : `<button class="btn" type="button" disabled>No number</button>`}
       <button class="btn donebtn wide" type="button" data-act="st" data-s="${install ? "installed" : "surveyed"}" data-id="${j.id}">✓ ${install ? "Installed" : "Surveyed"}, next job</button>
       <button class="btn" type="button" data-act="st" data-s="noanswer" data-id="${j.id}">No answer</button>
-      <button class="btn" type="button" data-act="open" data-id="${j.id}">Details</button>
+      <button class="btn" type="button" data-act="st" data-s="cancelled" data-id="${j.id}">Cancelled</button>
+      <button class="btn wide" type="button" data-act="open" data-id="${j.id}">Details</button>
     </div>
     ${tel ? `<button class="btn small ghost" type="button" data-act="copy" data-ph="${esc(tel)}" style="width:fit-content">Copy number</button>` : ""}
     ${lastLine}
@@ -639,6 +640,7 @@ function renderDay(){
             ? `<button class="btn donebtn grow" type="button" data-act="st" data-s="installed" data-id="${j.id}">✓ Installed</button>`
             : `<button class="btn donebtn grow" type="button" data-act="st" data-s="surveyed" data-id="${j.id}">✓ Surveyed</button>`}
           <button class="btn" type="button" data-act="st" data-s="noanswer" data-id="${j.id}">No answer</button>
+          <button class="btn" type="button" data-act="st" data-s="cancelled" data-id="${j.id}">Cancelled</button>
           <button class="btn ghost" type="button" data-act="open" data-id="${j.id}">Details</button>
         </div>`}
       </div></li>`;
@@ -868,7 +870,7 @@ async function planDay(){
 async function parseList(){
   const text = $("#paste").value.trim(), date = $("#pastedate").value || null;
   if (!text){ toast("Paste a customer list first."); return; }
-  if (/["\u201C\u201D]app["\u201C\u201D]\s*:\s*["\u201C\u201D]wk-loft-jobs/.test(text)){ await importJson(text); lsSet("loftjobs-draft", {text:"", date:""}); $("#paste") && ($("#paste").value = ""); return; }
+  if (/WK2[:.]|#import=/.test(text) || /["\u201C\u201D]app["\u201C\u201D]\s*:\s*["\u201C\u201D]wk-loft-jobs/.test(text)){ await importJson(text); lsSet("loftjobs-draft", {text:"", date:""}); $("#paste") && ($("#paste").value = ""); return; }
   S.busy = "parse"; renderAdd();
   let jobs = null;
   const sample = await getSample();
@@ -929,7 +931,19 @@ function cleanPaste(t){
     .replace(/[\u2013\u2014]/g, "-")
     .replace(/\r?\n/g, "");
 }
+async function unpackCode(text){
+  const m = /(?:WK2[:.]|#import=)\s*([A-Za-z0-9_-]{20,})/.exec(String(text).replace(/\s+/g, ""));
+  if (!m) return null;
+  let b = m[1].replace(/-/g, "+").replace(/_/g, "/"); while (b.length % 4) b += "=";
+  const bytes = Uint8Array.from(atob(b), c => c.charCodeAt(0));
+  const out = new Response(new Blob([bytes]).stream().pipeThrough(new DecompressionStream("deflate-raw")));
+  return await out.text();
+}
 async function importJson(raw){
+  if (/WK2[:.]|#import=/.test(raw)){
+    try { raw = await unpackCode(raw); } catch(e){ raw = null; }
+    if (!raw){ toast("That link or code was cut off. Ask Claude to send it again."); return; }
+  }
   raw = cleanPaste(raw);
   const a0 = raw.indexOf("{"), a1 = raw.lastIndexOf("}");
   if (a0 >= 0 && a1 > a0) raw = raw.slice(a0, a1 + 1);
@@ -950,7 +964,7 @@ async function importJson(raw){
   if ($("#importbox")) $("#importbox").value = "";
   const firstDay = d.plan ? d.jobs.map(j => j.date).filter(Boolean).sort()[0] : null;
   toast(d.plan ? `Added ${added} job${added===1?"":"s"}${updated ? `, updated ${updated}` : ""}. Route ready.` : `Imported: ${added} new, ${updated} updated.`);
-  if (firstDay){ S.day = firstDay; S.autoDay = false; location.hash = "day"; } else renderAll();
+  if (firstDay){ S.day = firstDay; S.autoDay = false; if (location.hash === "#day") setView("day"); else location.hash = "day"; } else renderAll();
 }
 function csv(){
   const cols = ["status","date","name","address","postcode","phone","window","notes","mins","loft_m2","depth_mm","scope"];
@@ -1083,7 +1097,14 @@ document.addEventListener("input", e => {
 });
 document.addEventListener("submit", e => { if (e.target.id === "jobform"){ e.preventDefault(); saveForm(e.target); } });
 document.addEventListener("keydown", e => { if (e.key !== "Escape") return; if (!$("#drawer").hidden) menu(false); else if (!$("#panel").hidden) closePanel(); });
-window.addEventListener("hashchange", () => setView(location.hash.slice(1)));
+async function importFromLink(){
+  const h = location.hash;
+  if (!h.startsWith("#import=")) return false;
+  history.replaceState(null, "", location.pathname + location.search + "#day");
+  await importJson(h);
+  return true;
+}
+window.addEventListener("hashchange", () => { if (location.hash.startsWith("#import=")) importFromLink(); else setView(location.hash.slice(1)); });
 
 /* ---------- Reasons and end of day report ---------- */
 const WHY_FOR = new Set(["noanswer","rebook","cancelled"]);
@@ -1400,8 +1421,11 @@ async function saveIcs(date){
   catch(err){ if (err?.code !== "declined") toast("Couldn't save the file."); }
 }
 
+const startImport = location.hash.startsWith("#import=") ? location.hash : "";
+if (startImport) history.replaceState(null, "", location.pathname + location.search + "#day");
 setView(location.hash.slice(1) || "day");
 initStore();
+if (startImport) (async () => { for (let i = 0; i < 50 && S.mode === "loading"; i++) await new Promise(r => setTimeout(r, 200)); await importJson(startImport); })();
 </script>
 
 <script>
